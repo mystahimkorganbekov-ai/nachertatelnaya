@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Начертательная геометрия — замена плоскостей проекций</title>
+<style>
+:root{--bg:#f6f7f4;--card:#fff;--ink:#1d2a2f;--mute:#5d6b70;--line:#d8ddd9;--acc:#0f6b5c;--acc2:#e8f3f0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI",system-ui,sans-serif}
+header{padding:20px clamp(14px,3vw,32px) 4px}
+h1{margin:0;font:600 1.45rem/1.2 Georgia,"Times New Roman",serif}
+header p{margin:4px 0 0;color:var(--mute)}
+main{display:grid;grid-template-columns:340px 1fr;gap:16px;padding:16px clamp(14px,3vw,32px) 32px;align-items:start}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+h2{margin:0 0 8px;font-size:1rem}
+.out{display:grid;gap:16px;min-width:0}
+#tasks{display:grid;gap:8px;margin-bottom:16px}
+.task{text-align:left;border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 11px;cursor:pointer;font:inherit;color:inherit}
+.task small{display:block;color:var(--mute)}
+.task.on{border-color:var(--acc);background:var(--acc2);box-shadow:inset 3px 0 0 var(--acc)}
+.task:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.pt{display:grid;grid-template-columns:28px repeat(3,1fr);gap:6px;align-items:center;margin-bottom:6px}
+.pt b{font-size:1.1rem}
+.pt input{width:100%;padding:6px;border:1px solid var(--line);border-radius:6px;font:inherit}
+.pt .h{color:var(--mute);font-size:.8rem}
+.btns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+button.b{border:1px solid var(--acc);background:var(--acc);color:#fff;border-radius:8px;padding:7px 12px;font:inherit;cursor:pointer}
+button.b.alt{background:#fff;color:var(--acc)}
+#wrap{overflow:auto;max-height:80vh}
+svg{width:100%;height:auto;min-height:320px;display:block;background:#fff}
+#steps ol{padding-left:20px;margin:0}
+#steps li{margin-bottom:10px}
+.res{background:var(--acc2);border-left:4px solid var(--acc);padding:10px 12px;border-radius:6px;font-size:1.05rem}
+.err{color:#b42318}
+.leg span{display:inline-block;margin-right:14px;font-size:.85rem}
+.leg i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:5px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Эпюр Монжа: замена плоскостей проекций</h1>
+  <p>Работает локально, без ограничений. Измените координаты — решение и чертёж пересчитаются сразу.</p>
+</header>
+<main>
+  <section class="card">
+    <h2>Задача</h2>
+    <div id="tasks"></div>
+    <h2>Координаты точек (X, Y, Z)</h2>
+    <div id="pts"></div>
+    <div class="btns">
+      <button class="b alt" id="reset">Сбросить значения</button>
+      <button class="b" id="dl">Скачать чертёж SVG</button>
+    </div>
+  </section>
+  <section class="out">
+    <div class="card">
+      <div class="leg">
+        <span><i style="background:#2563eb"></i>П1 (′)</span><span><i style="background:#dc2626"></i>П2 (″)</span>
+        <span><i style="background:#059669"></i>П4</span><span><i style="background:#7c3aed"></i>П5</span>
+      </div>
+      <div id="wrap"><svg id="epure" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    </div>
+    <div class="card" id="steps"></div>
+  </section>
+</main>
+
+<script>
+'use strict';
+/* ====== Константы и данные ====== */
+const K = 5;      // масштаб: пикселей на единицу координат
+const GAP = 30;   // зазор между новой осью и ближайшей проекцией, px
+const COL = {h:'#2563eb', v:'#dc2626', p4:'#059669', p5:'#7c3aed'};
+const TASKS = {
+  dihedral:{title:'Угол между гранями при ребре AB', desc:'Грани ABC и ABD: П1/П2 → П1/П4 → П4/П5', pts:'ABCD'},
+  length:  {title:'Натуральная величина AB, углы α и β', desc:'Длина отрезка, наклон к П1 и к П2', pts:'AB'},
+  dist:    {title:'Расстояние от точки C до прямой AB', desc:'Прямая проецируется в точку', pts:'ABC'}
+};
+const DEF = {A:[70,15,10], B:[20,45,50], C:[95,55,35], D:[40,10,75]};
+let task = 'dihedral';
+
+/* ====== Векторная математика (2D — чертёж, 3D — проверка) ====== */
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1]], add=(a,b)=>[a[0]+b[0],a[1]+b[1]], mul=(a,k)=>[a[0]*k,a[1]*k];
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1], len=a=>Math.hypot(a[0],a[1]), nrm=a=>mul(a,1/len(a));
+const s3=(a,b)=>a.map((v,i)=>v-b[i]), d3=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2], l3=a=>Math.sqrt(d3(a,a));
+const x3=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const deg=r=>r*180/Math.PI;
+const f=x=>(Math.round(x*100)/100).toFixed(2);
+const angle2=(a,b)=>deg(Math.acos(Math.max(-1,Math.min(1,dot(a,b)/len(a)/len(b)))));
+/* Эпюр: ось X направлена влево, П1 — под осью (y вниз), П2 — над осью (z вверх) */
+const H=p=>[-p[0]*K, p[1]*K];
+const V=p=>[-p[0]*K, -p[2]*K];
+
+/* ====== Замена плоскости проекций ======
+   S — проекции точек на плоскости, которая остаётся; c — «высоты» (расстояния
+   точек до этой плоскости, берутся из заменяемой проекции); n — единичная нормаль
+   новой оси, направленная в сторону точек S.
+   Новая проекция лежит на линии связи (⟂ оси) по другую сторону оси на расстоянии c. */
+function replace(S, c, n){
+  const m = Math.min(...S.map(p=>dot(p,n))) - GAP;      // положение оси вдоль n
+  const F=[], N=S.map((p,i)=>{
+    const d = dot(p,n)-m;                                // расстояние от S-проекции до оси
+    F.push(sub(p,mul(n,d)));                             // основание перпендикуляра на оси
+    return sub(p, mul(n, d + c[i]*K));
+  });
+  return {Q:mul(n,m), t:[-n[1],n[0]], F, N, d:S.map(p=>dot(p,n)-m)};
+}
+
+/* ====== Сцена (SVG) ====== */
+let L=[], T=[], PG=[], AR=[], PT=[];
+const reset=()=>{L=[];T=[];PG=[];AR=[];PT=[]};
+const line=(a,b,cls,col)=>{PT.push(a,b);L.push({a,b,cls,col})};
+const text=(p,s,col,dx=7,dy=-7)=>{PT.push(p);T.push({p,s,col,dx,dy})};
+const poly=(a,col)=>PG.push({a,col});
+function axis(r, name, col, extra=[]){
+  const ss=[...r.F,...r.N,...extra].map(p=>dot(p,r.t)), a=Math.min(...ss)-25, b=Math.max(...ss)+25;
+  line(add(r.Q,mul(r.t,a)), add(r.Q,mul(r.t,b)), 'ax', '#111');
+  text(add(r.Q,mul(r.t,a)), name, '#111', 0, -6);
+}
+function flush(){
+  const xs=PT.map(p=>p[0]), ys=PT.map(p=>p[1]), M=50;
+  const x0=Math.min(...xs)-M, y0=Math.min(...ys)-M, w=Math.max(...xs)-x0+M, h=Math.max(...ys)-y0+M;
+  const fs=Math.max(13, Math.max(w,h)/48), P=p=>p[0].toFixed(1)+','+p[1].toFixed(1);
+  let s=`<style>text{font-family:Georgia,serif;font-style:italic}.cn{stroke:#8a9a9e;stroke-dasharray:5 4;stroke-width:1}
+.ax{stroke-width:1.6}.edge{stroke-width:3}.thin{stroke-width:1.5}</style>`;
+  PG.forEach(g=>s+=`<polygon points="${g.a.map(P).join(' ')}" fill="${g.col}" fill-opacity=".12" stroke="none"/>`);
+  L.forEach(l=>s+=`<line x1="${l.a[0]}" y1="${l.a[1]}" x2="${l.b[0]}" y2="${l.b[1]}" class="${l.cls}" stroke="${l.col||''}"/>`);
+  AR.forEach(a=>s+=`<path d="${a.d}" fill="none" stroke="${a.col}" stroke-width="2"/>`);
+  T.forEach(t=>s+=`<circle cx="${t.p[0]}" cy="${t.p[1]}" r="${t.dot===0?0:2.6}" fill="${t.col}"/><text x="${t.p[0]+t.dx*fs/13}" y="${t.p[1]+t.dy*fs/13}" font-size="${fs}" fill="${t.col}">${t.s}</text>`);
+  const e=document.getElementById('epure');
+  e.setAttribute('viewBox',`${x0} ${y0} ${w} ${h}`);
+  e.innerHTML=s;
+}
+/* Рисует одну проекцию: точки, ребро AB, грани/отрезки */
+function view(P, names, suf, col, mode){
+  if(mode==='faces') for(let i=2;i<names.length;i++){ poly([P[0],P[1],P[i]],col); line(P[0],P[i],'thin',col); line(P[1],P[i],'thin',col); }
+  if(mode==='dist') line(P[0],P[2],'thin',col);
+  line(P[0],P[1],'edge',col);
+  names.forEach((n,i)=>text(P[i],n+suf,col));
+}
+
+/* ====== Выбор нормали оси ====== */
+// Ось x14 проводим параллельно отрезку; нормаль выбираем так, чтобы новая проекция уходила вниз (down) или вверх
+function normalFor(u, down){
+  let n=[-u[1],u[0]];
+  const bad = down ? (n[1]>1e-9||(Math.abs(n[1])<=1e-9&&n[0]>0)) : (n[1]<-1e-9||(Math.abs(n[1])<=1e-9&&n[0]>0));
+  return bad?mul(n,-1):n;
+}
+
+/* ====== Задачи ====== */
+// 1 и 3: ребро AB → точка (две замены), затем угол / расстояние
+function solveEdge(P, others, dih){
+  const names=['A','B',...others], pts=names.map(n=>P[n]);
+  const Hs=pts.map(H), Vs=pts.map(V);
+  if(len(sub(Hs[1],Hs[0]))<1e-6) throw new Error('Проекция A′B′ вырождается в точку (AB ⟂ П1). Измените координаты A или B.');
+  const u=nrm(sub(Hs[1],Hs[0]));
+  const r1=replace(Hs, pts.map(p=>p[2]), normalFor(u,true));              // П2 → П4
+  let v=nrm(sub(r1.N[1],r1.N[0])); if(v[0]>1e-9||(Math.abs(v[0])<=1e-9&&v[1]>0)) v=mul(v,-1);
+  const r2=replace(r1.N, r1.d.map(d=>d/K), v);                             // П1 → П5
+  const mode=dih?'faces':'dist';
+  // чертёж
+  view(Vs,names,'″',COL.v,mode); view(Hs,names,'′',COL.h,mode); view(r1.N,names,'₄',COL.p4,mode);
+  names.forEach((n,i)=>{line(Hs[i],Vs[i],'cn');line(Hs[i],r1.N[i],'cn');line(r1.N[i],r2.N[i],'cn')});
+  const A5=r2.N[0];
+  text(A5,'A₅≡B₅',COL.p5);
+  others.forEach((n,i)=>{const p=r2.N[i+2]; line(A5,p,'edge',COL.p5); text(p,n+'₅',COL.p5)});
+  line([-1e4,0],[1e4,0],'ax','#111'); PT.length-=2; // ось x12 (границы ниже)
+  const xs=PT.map(p=>p[0]); L[L.length-1]={a:[Math.min(...xs)-20,0],b:[Math.max(...xs)+20,0],cls:'ax',col:'#111'};
+  text([Math.min(...xs)-20,0],'x₁₂','#111',0,-6);
+  axis(r1,'x₁₄','#111',Hs); axis(r2,'x₄₅','#111',r1.N);
+  // угол по чертежу
+  const dirs=others.map((n,i)=>sub(r2.N[i+2],A5));
+  let res, an=null;
+  if(dih){
+    const [c,d]=dirs; an=angle2(c,d);
+    const a1=Math.atan2(c[1],c[0]), a2=Math.atan2(d[1],d[0]); let df=a2-a1; while(df>Math.PI)df-=2*Math.PI; while(df<-Math.PI)df+=2*Math.PI;
+    const r=Math.min(45,len(c)*.5,len(d)*.5), p1=add(A5,[r*Math.cos(a1),r*Math.sin(a1)]), p2=add(A5,[r*Math.cos(a2),r*Math.sin(a2)]);
+    AR.push({d:`M${p1} A${r},${r} 0 0 ${df>0?1:0} ${p2}`,col:COL.p5}); PT.push(p1,p2);
+    const am=a1+df/2; text(add(A5,[r*1.5*Math.cos(am),r*1.5*Math.sin(am)]),'φ='+f(an)+'°',COL.p5,0,0);
+  }
+  flush();
+  // аналитическая проверка
+  const e=s3(P.B,P.A), perp=X=>{const w=s3(X,P.A),k=d3(w,e)/d3(e,e);return w.map((x,i)=>x-k*e[i])};
+  const pc=perp(P[others[0]]);
+  if(l3(pc)<1e-9) throw new Error('Точка '+others[0]+' лежит на прямой AB.');
+  let chk;
+  if(dih){
+    const pd=perp(P[others[1]]); if(l3(pd)<1e-9) throw new Error('Точка D лежит на прямой AB.');
+    chk=deg(Math.acos(Math.max(-1,Math.min(1,d3(pc,pd)/l3(pc)/l3(pd)))));
+  } else chk=l3(pc);
+  const dd=r1.d.map(d=>f(d/K));
+  const zs=names.map(n=>`${n}: ${f(P[n][2])}`).join(', ');
+  const ds=names.map((n,i)=>`${n}: ${dd[i]}`).join(', ');
+  const steps=[
+    `<b>Исходные данные.</b> ${names.map(n=>`${n}(${P[n].map(f).join('; ')})`).join(', ')}. Строим горизонтальные проекции P′(x; y) под осью x₁₂ и фронтальные P″(x; z) над осью, соединяя их вертикальными линиями связи.`,
+    `<b>Замена П2 → П4.</b> Ось x₁₄ проводим <b>параллельно A′B′</b> (на расстоянии ${GAP/K} ед. от ближайшей точки). Из каждой P′ опускаем перпендикуляр на x₁₄ и по другую сторону оси откладываем высоту z (${zs}). Получаем ${names.map(n=>n+'₄').join(', ')}. Поскольку AB ∥ П4, отрезок A₄B₄ — натуральная величина AB = <b>${f(len(sub(r1.N[1],r1.N[0]))/K)}</b>.`,
+    `<b>Замена П1 → П5.</b> Ось x₄₅ проводим <b>перпендикулярно A₄B₄</b>. Линии связи параллельны A₄B₄. От x₄₅ откладываем расстояния от P′ до x₁₄ (${ds}). Так как AB ⟂ П5, она проецируется в точку A₅≡B₅, ${dih?'а грани ABC и ABD — в отрезки A₅C₅ и A₅D₅':'а расстояние от C до AB равно отрезку A₅C₅'}.`,
+    dih?`<b>Измерение.</b> Угол между отрезками A₅C₅ и A₅D₅ и есть двугранный угол при ребре AB.`:`<b>Измерение.</b> Длина A₅C₅ в масштабе чертежа даёт искомое расстояние.`,
+    `<div class="res">${dih?`Угол между гранями φ = <b>${f(an)}°</b> (аналитическая проверка: ${f(chk)}°)`:`Расстояние от C до AB = <b>${f(len(dirs[0])/K)}</b> (проверка: ${f(chk)})`}</div>`];
+  return steps;
+}
+
+// 2: натуральная величина и углы наклона
+function solveLength(P){
+  const A=P.A,B=P.B, Hs=[H(A),H(B)], Vs=[V(A),V(B)];
+  const dH=sub(Hs[1],Hs[0]), dV=sub(Vs[1],Vs[0]);
+  if(len(dH)<1e-6||len(dV)<1e-6) throw new Error('Отрезок перпендикулярен П1 или П2 — одна из проекций вырождается в точку. Измените координаты.');
+  const r1=replace(Hs,[A[2],B[2]],normalFor(nrm(dH),true));    // x14 ∥ A′B′
+  const r2=replace(Vs,[A[1],B[1]],normalFor(nrm(dV),false));   // x25 ∥ A″B″
+  const names=['A','B'];
+  view(Vs,names,'″',COL.v,'seg'); view(Hs,names,'′',COL.h,'seg');
+  view(r1.N,names,'₄',COL.p4,'seg'); view(r2.N,names,'₅',COL.p5,'seg');
+  [0,1].forEach(i=>{line(Hs[i],Vs[i],'cn');line(Hs[i],r1.N[i],'cn');line(Vs[i],r2.N[i],'cn')});
+  const xs=PT.map(p=>p[0]); const xa=[Math.min(...xs)-20,Math.max(...xs)+20];
+  line([xa[0],0],[xa[1],0],'ax','#111'); text([xa[0],0],'x₁₂','#111',0,-6);
+  axis(r1,'x₁₄','#111',Hs); axis(r2,'x₂₅','#111',Vs);
+  const v4=sub(r1.N[1],r1.N[0]), v5=sub(r2.N[1],r2.N[0]);
+  const al=Math.min(angle2(v4,r1.t),180-angle2(v4,r1.t)), be=Math.min(angle2(v5,r2.t),180-angle2(v5,r2.t));
+  text(add(r1.N[0],mul(v4,.5)),'|AB|='+f(len(v4)/K)+', α='+f(al)+'°',COL.p4,8,16);
+  text(add(r2.N[0],mul(v5,.5)),'|AB|='+f(len(v5)/K)+', β='+f(be)+'°',COL.p5,8,-10);
+  flush();
+  const e=s3(B,A), Lr=l3(e);
+  return [
+    `<b>Исходные данные.</b> A(${A.map(f).join('; ')}), B(${B.map(f).join('; ')}). Строим A′B′ и A″B″ на эпюре.`,
+    `<b>Замена П2 → П4.</b> Ось x₁₄ параллельно A′B′. От x₁₄ на линиях связи откладываем высоты zA=${f(A[2])}, zB=${f(B[2])}. Отрезок A₄B₄ — натуральная величина AB (AB ∥ П4), а его угол с x₁₄ — угол наклона <b>α</b> к П1 = <b>${f(al)}°</b>.`,
+    `<b>Замена П1 → П5.</b> Ось x₂₅ параллельно A″B″. От x₂₅ откладываем глубины yA=${f(A[1])}, yB=${f(B[1])}. A₅B₅ = |AB| (AB ∥ П5), угол с x₂₅ — угол наклона <b>β</b> к П2 = <b>${f(be)}°</b>.`,
+    `<div class="res">|AB| = <b>${f(len(v4)/K)}</b>; α = <b>${f(al)}°</b>; β = <b>${f(be)}°</b><br><small>Проверка: |AB|=${f(Lr)}, α=${f(deg(Math.asin(Math.abs(e[2])/Lr)))}°, β=${f(deg(Math.asin(Math.abs(e[1])/Lr)))}°</small></div>`];
+}
+
+/* ====== Интерфейс ====== */
+function build(){
+  const tk=document.getElementById('tasks'), pt=document.getElementById('pts');
+  Object.entries(TASKS).forEach(([id,t])=>{
+    const b=document.createElement('button'); b.className='task'; b.dataset.id=id;
+    b.innerHTML=`<b>${t.title}</b><small>${t.desc}</small>`;
+    b.onclick=()=>{task=id;render()}; tk.appendChild(b);
+  });
+  pt.innerHTML='<div class="pt"><span></span><span class="h">X</span><span class="h">Y</span><span class="h">Z</span></div>';
+  for(const n of 'ABCD'){
+    const r=document.createElement('div'); r.className='pt'; r.id='row'+n;
+    r.innerHTML=`<b>${n}</b>`+[0,1,2].map(i=>`<input type="number" step="any" id="${n}${i}" aria-label="${n} ${'XYZ'[i]}">`).join('');
+    pt.appendChild(r);
+  }
+  fill();
+  pt.addEventListener('input',render);
+}
+function fill(){ for(const n in DEF) DEF[n].forEach((v,i)=>document.getElementById(n+i).value=v); }
+function render(){
+  document.querySelectorAll('.task').forEach(b=>b.classList.toggle('on',b.dataset.id===task));
+  const used=TASKS[task].pts;
+  for(const n of 'ABCD') document.getElementById('row'+n).hidden=!used.includes(n);
+  const P={}; for(const n of used) P[n]=[0,1,2].map(i=>parseFloat(document.getElementById(n+i).value)||0);
+  const box=document.getElementById('steps');
+  reset();
+  try{
+    const steps = task==='dihedral'?solveEdge(P,['C','D'],true) : task==='dist'?solveEdge(P,['C'],false) : solveLength(P);
+    box.innerHTML='<h2>Пошаговое решение</h2><ol>'+steps.slice(0,-1).map(s=>`<li>${s}</li>`).join('')+'</ol>'+steps[steps.length-1];
+  }catch(e){
+    document.getElementById('epure').innerHTML=''; box.innerHTML=`<p class="err">${e.message}</p>`;
+  }
+}
+document.getElementById('reset').onclick=()=>{fill();render()};
+document.getElementById('dl').onclick=()=>{
+  const e=document.getElementById('epure'), s=e.outerHTML.replace('<svg','<svg width="1000"');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([s],{type:'image/svg+xml'})); a.download='epure.svg'; a.click();
+};
+build(); render();
+</script>
+</body>
+</html>

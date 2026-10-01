@@ -34,6 +34,7 @@ svg{width:100%;height:auto;min-height:320px;display:block;background:#fff}
 #steps li{margin-bottom:10px}
 .res{background:var(--acc2);border-left:4px solid var(--acc);padding:10px 12px;border-radius:6px;font-size:1.05rem}
 .err{color:#b42318}
+.fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.72em;line-height:1.1;margin:0 1px}.fr i{font-style:normal;padding:0 2px}.fr i:first-child{border-bottom:1px solid currentColor}
 .leg span{display:inline-block;margin-right:14px;font-size:.85rem}
 .leg i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:5px}
 </style>
@@ -57,8 +58,8 @@ svg{width:100%;height:auto;min-height:320px;display:block;background:#fff}
   <section class="out">
     <div class="card">
       <div class="leg">
-        <span><i style="background:#2563eb"></i>П1 (′)</span><span><i style="background:#dc2626"></i>П2 (″)</span>
-        <span><i style="background:#059669"></i>П4</span><span><i style="background:#7c3aed"></i>П5</span>
+        <span><i style="background:#2563eb"></i>П1 (A1, B1…)</span><span><i style="background:#dc2626"></i>П2 (A2, B2…)</span>
+        <span><i style="background:#059669"></i>П3 (A3…)</span><span><i style="background:#7c3aed"></i>П4 (A4…)</span>
       </div>
       <div id="wrap"><svg id="epure" xmlns="http://www.w3.org/2000/svg"></svg></div>
     </div>
@@ -73,11 +74,11 @@ const K = 5;      // масштаб: пикселей на единицу коо
 const GAP = 30;   // зазор между новой осью и ближайшей проекцией, px
 const COL = {h:'#2563eb', v:'#dc2626', p4:'#059669', p5:'#7c3aed'};
 const TASKS = {
-  dihedral:{title:'Угол между гранями при ребре AB', desc:'Грани ABC и ABD: П1/П2 → П1/П4 → П4/П5', pts:'ABCD'},
+  dihedral:{title:'Двугранный угол пирамиды SABC при ребре BS', desc:'Грани ABS и CBS: П2/П1 → П1/П3 → П3/П4', pts:'ABCS'},
   length:  {title:'Натуральная величина AB, углы α и β', desc:'Длина отрезка, наклон к П1 и к П2', pts:'AB'},
   dist:    {title:'Расстояние от точки C до прямой AB', desc:'Прямая проецируется в точку', pts:'ABC'}
 };
-const DEF = {A:[70,15,10], B:[20,45,50], C:[95,55,35], D:[40,10,75]};
+const DEF = {A:[70,15,10], B:[20,45,50], C:[95,55,35], S:[40,10,75]};
 let task = 'dihedral';
 
 /* ====== Векторная математика (2D — чертёж, 3D — проверка) ====== */
@@ -113,10 +114,15 @@ const reset=()=>{L=[];T=[];PG=[];AR=[];PT=[]};
 const line=(a,b,cls,col)=>{PT.push(a,b);L.push({a,b,cls,col})};
 const text=(p,s,col,dx=7,dy=-7)=>{PT.push(p);T.push({p,s,col,dx,dy})};
 const poly=(a,col)=>PG.push({a,col});
+const axisLabel=(p,fr)=>{T.push({p,fr,col:'#111'});PT.push(p,add(p,[110,0]),add(p,[0,-45]),add(p,[0,45]))};
+/* Подпись оси в виде дроби: X(Пa/Пb) — числитель над чертой, знаменатель под ней */
+function frac(t,fs){const x=t.p[0],y=t.p[1]-6*fs/13,yl=y-fs*.3,xl=x+fs*.8,w=fs*1.5,a=`font-size="${fs*.8}" fill="#111" text-anchor="middle"`;
+  return `<text x="${x}" y="${y}" font-size="${fs}" fill="#111">X</text><line x1="${xl}" y1="${yl}" x2="${xl+w}" y2="${yl}" stroke="#111"/><text x="${xl+w/2}" y="${yl-fs*.12}" ${a}>${t.fr[0]}</text><text x="${xl+w/2}" y="${yl+fs*.68}" ${a}>${t.fr[1]}</text>`}
+const ax=(a,b)=>`X<span class="fr"><i>${a}</i><i>${b}</i></span>`;   // то же для текста решения
 function axis(r, name, col, extra=[]){
   const ss=[...r.F,...r.N,...extra].map(p=>dot(p,r.t)), a=Math.min(...ss)-25, b=Math.max(...ss)+25;
   line(add(r.Q,mul(r.t,a)), add(r.Q,mul(r.t,b)), 'ax', '#111');
-  text(add(r.Q,mul(r.t,a)), name, '#111', 0, -6);
+  axisLabel(add(r.Q,mul(r.t,a)), name);
 }
 function flush(){
   const xs=PT.map(p=>p[0]), ys=PT.map(p=>p[1]), M=50;
@@ -127,14 +133,17 @@ function flush(){
   PG.forEach(g=>s+=`<polygon points="${g.a.map(P).join(' ')}" fill="${g.col}" fill-opacity=".12" stroke="none"/>`);
   L.forEach(l=>s+=`<line x1="${l.a[0]}" y1="${l.a[1]}" x2="${l.b[0]}" y2="${l.b[1]}" class="${l.cls}" stroke="${l.col||''}"/>`);
   AR.forEach(a=>s+=`<path d="${a.d}" fill="none" stroke="${a.col}" stroke-width="2"/>`);
-  T.forEach(t=>s+=`<circle cx="${t.p[0]}" cy="${t.p[1]}" r="${t.dot===0?0:2.6}" fill="${t.col}"/><text x="${t.p[0]+t.dx*fs/13}" y="${t.p[1]+t.dy*fs/13}" font-size="${fs}" fill="${t.col}">${t.s}</text>`);
+  T.forEach(t=>{ if(t.fr){s+=frac(t,fs);return} s+=`<circle cx="${t.p[0]}" cy="${t.p[1]}" r="${t.dot===0?0:2.6}" fill="${t.col}"/><text x="${t.p[0]+t.dx*fs/13}" y="${t.p[1]+t.dy*fs/13}" font-size="${fs}" fill="${t.col}">${t.s}</text>`;});
   const e=document.getElementById('epure');
   e.setAttribute('viewBox',`${x0} ${y0} ${w} ${h}`);
   e.innerHTML=s;
 }
-/* Рисует одну проекцию: точки, ребро AB, грани/отрезки */
+/* Рисует одну проекцию: точки, общее ребро, контур пирамиды/отрезки */
 function view(P, names, suf, col, mode){
-  if(mode==='faces') for(let i=2;i<names.length;i++){ poly([P[0],P[1],P[i]],col); line(P[0],P[i],'thin',col); line(P[1],P[i],'thin',col); }
+  if(mode==='faces'){            // пирамида SABC: порядок точек [B,S,A,C]; грани ABS, CBS и основание ABC
+    poly([P[0],P[1],P[2]],col); poly([P[0],P[1],P[3]],col); poly([P[0],P[2],P[3]],col);
+    [[0,2],[0,3],[1,2],[1,3],[2,3]].forEach(([i,j])=>line(P[i],P[j],'thin',col));   // BA, BC, SA, SC, AC
+  }
   if(mode==='dist') line(P[0],P[2],'thin',col);
   line(P[0],P[1],'edge',col);
   names.forEach((n,i)=>text(P[i],n+suf,col));
@@ -149,26 +158,28 @@ function normalFor(u, down){
 }
 
 /* ====== Задачи ====== */
-// 1 и 3: ребро AB → точка (две замены), затем угол / расстояние
-function solveEdge(P, others, dih){
-  const names=['A','B',...others], pts=names.map(n=>P[n]);
+// 1 и 3: общее ребро (BS или AB) → точка (две замены), затем угол / расстояние
+function solveEdge(P, edge, others, dih){
+  const [E0,E1]=edge, E=E0+E1, names=[...edge,...others], pts=names.map(n=>P[n]);
   const Hs=pts.map(H), Vs=pts.map(V);
-  if(len(sub(Hs[1],Hs[0]))<1e-6) throw new Error('Проекция A′B′ вырождается в точку (AB ⟂ П1). Измените координаты A или B.');
+  if(len(sub(Hs[1],Hs[0]))<1e-6) throw new Error(`Проекция ${E0}1${E1}1 вырождается в точку (${E} ⟂ П1). Измените координаты ${E0} или ${E1}.`);
   const u=nrm(sub(Hs[1],Hs[0]));
   const r1=replace(Hs, pts.map(p=>p[2]), normalFor(u,true));              // П2 → П4
   let v=nrm(sub(r1.N[1],r1.N[0])); if(v[0]>1e-9||(Math.abs(v[0])<=1e-9&&v[1]>0)) v=mul(v,-1);
   const r2=replace(r1.N, r1.d.map(d=>d/K), v);                             // П1 → П5
   const mode=dih?'faces':'dist';
   // чертёж
-  view(Vs,names,'″',COL.v,mode); view(Hs,names,'′',COL.h,mode); view(r1.N,names,'₄',COL.p4,mode);
+  view(Vs,names,'2',COL.v,mode); view(Hs,names,'1',COL.h,mode); view(r1.N,names,'3',COL.p4,mode);
   names.forEach((n,i)=>{line(Hs[i],Vs[i],'cn');line(Hs[i],r1.N[i],'cn');line(r1.N[i],r2.N[i],'cn')});
   const A5=r2.N[0];
-  text(A5,'A₅≡B₅',COL.p5);
-  others.forEach((n,i)=>{const p=r2.N[i+2]; line(A5,p,'edge',COL.p5); text(p,n+'₅',COL.p5)});
+  const Vn=dih?E1:E0;   // вершина, в которую проецируется ребро: S4≡B4 (для BS)
+  text(A5,Vn+'4≡'+(dih?E0:E1)+'4',COL.p5);
+  others.forEach((n,i)=>{const p=r2.N[i+2]; line(A5,p,'edge',COL.p5); text(p,n+'4',COL.p5)});
+  if(dih){ poly([A5,r2.N[2],r2.N[3]],COL.p5); line(r2.N[2],r2.N[3],'thin',COL.p5); }   // основание A4C4 замыкает контур
   line([-1e4,0],[1e4,0],'ax','#111'); PT.length-=2; // ось x12 (границы ниже)
   const xs=PT.map(p=>p[0]); L[L.length-1]={a:[Math.min(...xs)-20,0],b:[Math.max(...xs)+20,0],cls:'ax',col:'#111'};
-  text([Math.min(...xs)-20,0],'x₁₂','#111',0,-6);
-  axis(r1,'x₁₄','#111',Hs); axis(r2,'x₄₅','#111',r1.N);
+  axisLabel([Math.min(...xs)-20,0],['П2','П1']);
+  axis(r1,['П1','П3'],'#111',Hs); axis(r2,['П3','П4'],'#111',r1.N);
   // угол по чертежу
   const dirs=others.map((n,i)=>sub(r2.N[i+2],A5));
   let res, an=null;
@@ -181,23 +192,25 @@ function solveEdge(P, others, dih){
   }
   flush();
   // аналитическая проверка
-  const e=s3(P.B,P.A), perp=X=>{const w=s3(X,P.A),k=d3(w,e)/d3(e,e);return w.map((x,i)=>x-k*e[i])};
+  const e=s3(P[E1],P[E0]), perp=X=>{const w=s3(X,P[E0]),k=d3(w,e)/d3(e,e);return w.map((x,i)=>x-k*e[i])};
   const pc=perp(P[others[0]]);
-  if(l3(pc)<1e-9) throw new Error('Точка '+others[0]+' лежит на прямой AB.');
+  if(l3(pc)<1e-9) throw new Error('Точка '+others[0]+' лежит на прямой '+E+'.');
   let chk;
   if(dih){
-    const pd=perp(P[others[1]]); if(l3(pd)<1e-9) throw new Error('Точка D лежит на прямой AB.');
+    const pd=perp(P[others[1]]); if(l3(pd)<1e-9) throw new Error('Точка '+others[1]+' лежит на прямой '+E+'.');
     chk=deg(Math.acos(Math.max(-1,Math.min(1,d3(pc,pd)/l3(pc)/l3(pd)))));
   } else chk=l3(pc);
   const dd=r1.d.map(d=>f(d/K));
   const zs=names.map(n=>`${n}: ${f(P[n][2])}`).join(', ');
   const ds=names.map((n,i)=>`${n}: ${dd[i]}`).join(', ');
+  const X12=ax('П2','П1'), X13=ax('П1','П3'), X34=ax('П3','П4');
+  const sf=k=>names.map(n=>n+k).join(', '), V4=Vn+'4≡'+(dih?E0:E1)+'4', R=others.map(n=>Vn+'4'+n+'4');
   const steps=[
-    `<b>Исходные данные.</b> ${names.map(n=>`${n}(${P[n].map(f).join('; ')})`).join(', ')}. Строим горизонтальные проекции P′(x; y) под осью x₁₂ и фронтальные P″(x; z) над осью, соединяя их вертикальными линиями связи.`,
-    `<b>Замена П2 → П4.</b> Ось x₁₄ проводим <b>параллельно A′B′</b> (на расстоянии ${GAP/K} ед. от ближайшей точки). Из каждой P′ опускаем перпендикуляр на x₁₄ и по другую сторону оси откладываем высоту z (${zs}). Получаем ${names.map(n=>n+'₄').join(', ')}. Поскольку AB ∥ П4, отрезок A₄B₄ — натуральная величина AB = <b>${f(len(sub(r1.N[1],r1.N[0]))/K)}</b>.`,
-    `<b>Замена П1 → П5.</b> Ось x₄₅ проводим <b>перпендикулярно A₄B₄</b>. Линии связи параллельны A₄B₄. От x₄₅ откладываем расстояния от P′ до x₁₄ (${ds}). Так как AB ⟂ П5, она проецируется в точку A₅≡B₅, ${dih?'а грани ABC и ABD — в отрезки A₅C₅ и A₅D₅':'а расстояние от C до AB равно отрезку A₅C₅'}.`,
-    dih?`<b>Измерение.</b> Угол между отрезками A₅C₅ и A₅D₅ и есть двугранный угол при ребре AB.`:`<b>Измерение.</b> Длина A₅C₅ в масштабе чертежа даёт искомое расстояние.`,
-    `<div class="res">${dih?`Угол между гранями φ = <b>${f(an)}°</b> (аналитическая проверка: ${f(chk)}°)`:`Расстояние от C до AB = <b>${f(len(dirs[0])/K)}</b> (проверка: ${f(chk)})`}</div>`];
+    `<b>Исходные данные.</b> ${names.map(n=>`${n}(${P[n].map(f).join('; ')})`).join(', ')}. Строим горизонтальные проекции ${sf(1)} (под осью ${X12}) и фронтальные ${sf(2)} (над осью), соединяя их вертикальными линиями связи.${dih?' Все вершины соединяем: рёбра SA, SB, SC и основание AB, BC, CA — на каждой проекции получается замкнутый контур пирамиды SABC. Общее ребро — BS, грани ABS и CBS.':''}`,
+    `<b>Первая замена П2 → П3.</b> Ось ${X13} проводим строго <b>параллельно ${E0}1${E1}1</b> (на расстоянии ${GAP/K} ед. от ближайшей точки). Из каждой проекции опускаем перпендикуляр на ось и по другую сторону оси откладываем высоту z (${zs}). Получаем ${sf(3)}. Поскольку ${E} ∥ П3, отрезок ${E0}3${E1}3 — натуральная величина ${E} = <b>${f(len(sub(r1.N[1],r1.N[0]))/K)}</b>.`,
+    `<b>Вторая замена П1 → П4.</b> Ось ${X34} проводим строго <b>перпендикулярно ${E0}3${E1}3</b>. Линии связи параллельны ${E0}3${E1}3. От оси ${X34} откладываем расстояния от ${sf(1)} до оси ${X13} (${ds}). Так как ${E} ⟂ П4, ребро проецируется в точку <b>${V4}</b>${dih?', грани ABS и CBS — в отрезки S4A4 и S4C4, а основание ABC — в треугольник A4B4C4 (сторона A4C4)':`, а расстояние от ${others[0]} до ${E} равно отрезку ${R[0]}`}.`,
+    dih?`<b>Измерение.</b> Двугранный угол φ измеряем при вершине ${V4} между лучами ${R[0]} и ${R[1]}.`:`<b>Измерение.</b> Длина ${R[0]} в масштабе чертежа даёт искомое расстояние.`,
+    `<div class="res">${dih?`Двугранный угол φ = <b>${f(an)}°</b> (аналитическая проверка: ${f(chk)}°)`:`Расстояние от ${others[0]} до ${E} = <b>${f(len(dirs[0])/K)}</b> (проверка: ${f(chk)})`}</div>`];
   return steps;
 }
 
@@ -209,22 +222,23 @@ function solveLength(P){
   const r1=replace(Hs,[A[2],B[2]],normalFor(nrm(dH),true));    // x14 ∥ A′B′
   const r2=replace(Vs,[A[1],B[1]],normalFor(nrm(dV),false));   // x25 ∥ A″B″
   const names=['A','B'];
-  view(Vs,names,'″',COL.v,'seg'); view(Hs,names,'′',COL.h,'seg');
-  view(r1.N,names,'₄',COL.p4,'seg'); view(r2.N,names,'₅',COL.p5,'seg');
+  view(Vs,names,'2',COL.v,'seg'); view(Hs,names,'1',COL.h,'seg');
+  view(r1.N,names,'3',COL.p4,'seg'); view(r2.N,names,'4',COL.p5,'seg');
   [0,1].forEach(i=>{line(Hs[i],Vs[i],'cn');line(Hs[i],r1.N[i],'cn');line(Vs[i],r2.N[i],'cn')});
   const xs=PT.map(p=>p[0]); const xa=[Math.min(...xs)-20,Math.max(...xs)+20];
-  line([xa[0],0],[xa[1],0],'ax','#111'); text([xa[0],0],'x₁₂','#111',0,-6);
-  axis(r1,'x₁₄','#111',Hs); axis(r2,'x₂₅','#111',Vs);
+  line([xa[0],0],[xa[1],0],'ax','#111'); axisLabel([xa[0],0],['П2','П1']);
+  axis(r1,['П1','П3'],'#111',Hs); axis(r2,['П2','П4'],'#111',Vs);
   const v4=sub(r1.N[1],r1.N[0]), v5=sub(r2.N[1],r2.N[0]);
   const al=Math.min(angle2(v4,r1.t),180-angle2(v4,r1.t)), be=Math.min(angle2(v5,r2.t),180-angle2(v5,r2.t));
   text(add(r1.N[0],mul(v4,.5)),'|AB|='+f(len(v4)/K)+', α='+f(al)+'°',COL.p4,8,16);
   text(add(r2.N[0],mul(v5,.5)),'|AB|='+f(len(v5)/K)+', β='+f(be)+'°',COL.p5,8,-10);
   flush();
   const e=s3(B,A), Lr=l3(e);
+  const X13=ax('П1','П3'), X24=ax('П2','П4');
   return [
-    `<b>Исходные данные.</b> A(${A.map(f).join('; ')}), B(${B.map(f).join('; ')}). Строим A′B′ и A″B″ на эпюре.`,
-    `<b>Замена П2 → П4.</b> Ось x₁₄ параллельно A′B′. От x₁₄ на линиях связи откладываем высоты zA=${f(A[2])}, zB=${f(B[2])}. Отрезок A₄B₄ — натуральная величина AB (AB ∥ П4), а его угол с x₁₄ — угол наклона <b>α</b> к П1 = <b>${f(al)}°</b>.`,
-    `<b>Замена П1 → П5.</b> Ось x₂₅ параллельно A″B″. От x₂₅ откладываем глубины yA=${f(A[1])}, yB=${f(B[1])}. A₅B₅ = |AB| (AB ∥ П5), угол с x₂₅ — угол наклона <b>β</b> к П2 = <b>${f(be)}°</b>.`,
+    `<b>Исходные данные.</b> A(${A.map(f).join('; ')}), B(${B.map(f).join('; ')}). Строим A1B1 и A2B2 на эпюре.`,
+    `<b>Замена П2 → П3.</b> Ось ${X13} параллельно A1B1. От оси на линиях связи откладываем высоты zA=${f(A[2])}, zB=${f(B[2])}. Отрезок A3B3 — натуральная величина AB (AB ∥ П3), а его угол с осью — угол наклона <b>α</b> к П1 = <b>${f(al)}°</b>.`,
+    `<b>Замена П1 → П4.</b> Ось ${X24} параллельно A2B2. От неё откладываем глубины yA=${f(A[1])}, yB=${f(B[1])}. A4B4 = |AB| (AB ∥ П4), угол с осью — угол наклона <b>β</b> к П2 = <b>${f(be)}°</b>.`,
     `<div class="res">|AB| = <b>${f(len(v4)/K)}</b>; α = <b>${f(al)}°</b>; β = <b>${f(be)}°</b><br><small>Проверка: |AB|=${f(Lr)}, α=${f(deg(Math.asin(Math.abs(e[2])/Lr)))}°, β=${f(deg(Math.asin(Math.abs(e[1])/Lr)))}°</small></div>`];
 }
 
@@ -237,7 +251,7 @@ function build(){
     b.onclick=()=>{task=id;render()}; tk.appendChild(b);
   });
   pt.innerHTML='<div class="pt"><span></span><span class="h">X</span><span class="h">Y</span><span class="h">Z</span></div>';
-  for(const n of 'ABCD'){
+  for(const n of 'ABCS'){
     const r=document.createElement('div'); r.className='pt'; r.id='row'+n;
     r.innerHTML=`<b>${n}</b>`+[0,1,2].map(i=>`<input type="number" step="any" id="${n}${i}" aria-label="${n} ${'XYZ'[i]}">`).join('');
     pt.appendChild(r);
@@ -249,12 +263,12 @@ function fill(){ for(const n in DEF) DEF[n].forEach((v,i)=>document.getElementBy
 function render(){
   document.querySelectorAll('.task').forEach(b=>b.classList.toggle('on',b.dataset.id===task));
   const used=TASKS[task].pts;
-  for(const n of 'ABCD') document.getElementById('row'+n).hidden=!used.includes(n);
+  for(const n of 'ABCS') document.getElementById('row'+n).hidden=!used.includes(n);
   const P={}; for(const n of used) P[n]=[0,1,2].map(i=>parseFloat(document.getElementById(n+i).value)||0);
   const box=document.getElementById('steps');
   reset();
   try{
-    const steps = task==='dihedral'?solveEdge(P,['C','D'],true) : task==='dist'?solveEdge(P,['C'],false) : solveLength(P);
+    const steps = task==='dihedral'?solveEdge(P,['B','S'],['A','C'],true) : task==='dist'?solveEdge(P,['A','B'],['C'],false) : solveLength(P);
     box.innerHTML='<h2>Пошаговое решение</h2><ol>'+steps.slice(0,-1).map(s=>`<li>${s}</li>`).join('')+'</ol>'+steps[steps.length-1];
   }catch(e){
     document.getElementById('epure').innerHTML=''; box.innerHTML=`<p class="err">${e.message}</p>`;

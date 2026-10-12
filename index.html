@@ -3,281 +3,406 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Начертательная геометрия — замена плоскостей проекций</title>
+<title>РќР°С‡РµСЂС‚Р°С‚РµР»СЊРЅР°СЏ РіРµРѕРјРµС‚СЂРёСЏ вЂ” РєР°Р»СЊРєСѓР»СЏС‚РѕСЂ</title>
 <style>
 :root{--bg:#f6f7f4;--card:#fff;--ink:#1d2a2f;--mute:#5d6b70;--line:#d8ddd9;--acc:#0f6b5c;--acc2:#e8f3f0}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI",system-ui,sans-serif}
-header{padding:20px clamp(14px,3vw,32px) 4px}
-h1{margin:0;font:600 1.45rem/1.2 Georgia,"Times New Roman",serif}
-header p{margin:4px 0 0;color:var(--mute)}
-main{display:grid;grid-template-columns:340px 1fr;gap:16px;padding:16px clamp(14px,3vw,32px) 32px;align-items:start}
-@media(max-width:900px){main{grid-template-columns:1fr}}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+header{padding:10px clamp(12px,2vw,24px) 0;flex:none}
+h1{margin:0;font:600 1.25rem/1.2 Georgia,"Times New Roman",serif}
+header p{margin:2px 0 0;color:var(--mute);font-size:.85rem}
+main{flex:1;min-height:0;display:grid;grid-template-columns:320px minmax(0,1fr);gap:12px;padding:10px clamp(12px,2vw,24px) 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+.side{overflow:auto;min-height:0}
+.out{display:flex;flex-direction:column;min-height:0;overflow:hidden}
 h2{margin:0 0 8px;font-size:1rem}
-.out{display:grid;gap:16px;min-width:0}
-#tasks{display:grid;gap:8px;margin-bottom:16px}
+#tasks{display:grid;gap:8px;margin-bottom:14px}
 .task{text-align:left;border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 11px;cursor:pointer;font:inherit;color:inherit}
 .task small{display:block;color:var(--mute)}
 .task.on{border-color:var(--acc);background:var(--acc2);box-shadow:inset 3px 0 0 var(--acc)}
-.task:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.task:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
 .pt{display:grid;grid-template-columns:28px repeat(3,1fr);gap:6px;align-items:center;margin-bottom:6px}
 .pt b{font-size:1.1rem}
 .pt input{width:100%;padding:6px;border:1px solid var(--line);border-radius:6px;font:inherit}
 .pt .h{color:var(--mute);font-size:.8rem}
-.btns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 button.b{border:1px solid var(--acc);background:var(--acc);color:#fff;border-radius:8px;padding:7px 12px;font:inherit;cursor:pointer}
 button.b.alt{background:#fff;color:var(--acc)}
-#wrap{overflow:auto;max-height:80vh}
-svg{width:100%;height:auto;min-height:320px;display:block;background:#fff}
-#steps ol{padding-left:20px;margin:0}
-#steps li{margin-bottom:10px}
-.res{background:var(--acc2);border-left:4px solid var(--acc);padding:10px 12px;border-radius:6px;font-size:1.05rem}
-.err{color:#b42318}
-.fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.72em;line-height:1.1;margin:0 1px}.fr i{font-style:normal;padding:0 2px}.fr i:first-child{border-bottom:1px solid currentColor}
+button.b.on{background:var(--acc);color:#fff}
+button.b:disabled{opacity:.4;cursor:default}
+.leg{flex:none;margin-bottom:6px}
 .leg span{display:inline-block;margin-right:14px;font-size:.85rem}
 .leg i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:5px}
+/* РћРєРЅРѕ С‡РµСЂС‚РµР¶Р°: Р·Р°РЅРёРјР°РµС‚ РІСЃС‘ СЃРІРѕР±РѕРґРЅРѕРµ РјРµСЃС‚Рѕ, SVG РІРїРёСЃС‹РІР°РµС‚СЃСЏ С†РµР»РёРєРѕРј (viewBox + meet) */
+#wrap{flex:1 1 auto;min-height:180px;position:relative;border:1px solid var(--line);border-radius:6px;background:#fff;overflow:hidden}
+svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.nav{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;flex:none}
+.nav .sp{flex:1}
+#sn{font-variant-numeric:tabular-nums;min-width:120px;text-align:center}
+#cur{margin-top:8px;max-height:26vh;overflow:auto;flex:none}
+.res{background:var(--acc2);border-left:4px solid var(--acc);padding:8px 12px;border-radius:6px;font-size:1.02rem;margin-top:6px}
+.err{color:#b42318}
+details{margin-top:14px}
+details ol{padding-left:20px;margin:8px 0 0}
+details li{margin-bottom:8px}
+summary{cursor:pointer;font-weight:600}
+.fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.72em;line-height:1.1;margin:0 1px}
+.fr i{font-style:normal;padding:0 2px}.fr i:first-child{border-bottom:1px solid currentColor}
+sub{font-size:.7em;line-height:0}
+@media(max-width:900px){
+  body{height:auto;overflow:auto;display:block}
+  main{display:block}
+  .side{overflow:visible;margin-bottom:12px}
+  .out{overflow:visible}
+  #wrap{flex:none;height:62vh}
+  #cur{max-height:none}
+}
 </style>
 </head>
 <body>
 <header>
-  <h1>Эпюр Монжа: замена плоскостей проекций</h1>
-  <p>Работает локально, без ограничений. Измените координаты — решение и чертёж пересчитаются сразу.</p>
+  <h1>Р­РїСЋСЂ РњРѕРЅР¶Р°: СЃРїРѕСЃРѕР±С‹ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёСЏ РїСЂРѕРµРєС†РёР№</h1>
+  <p>Р Р°Р±РѕС‚Р°РµС‚ Р»РѕРєР°Р»СЊРЅРѕ. РР·РјРµРЅРёС‚Рµ РєРѕРѕСЂРґРёРЅР°С‚С‹ вЂ” СЂРµС€РµРЅРёРµ РїРµСЂРµСЃС‡РёС‚Р°РµС‚СЃСЏ. Р›РёСЃС‚Р°Р№С‚Рµ С€Р°РіРё РёР»Рё РІРєР»СЋС‡РёС‚Рµ В«Р“РѕС‚РѕРІРѕРµ СЂРµС€РµРЅРёРµВ».</p>
 </header>
 <main>
-  <section class="card">
-    <h2>Задача</h2>
+  <section class="card side">
+    <h2>Р—Р°РґР°С‡Р°</h2>
     <div id="tasks"></div>
-    <h2>Координаты точек (X, Y, Z)</h2>
+    <h2>РљРѕРѕСЂРґРёРЅР°С‚С‹ С‚РѕС‡РµРє (X, Y, Z)</h2>
     <div id="pts"></div>
     <div class="btns">
-      <button class="b alt" id="reset">Сбросить значения</button>
-      <button class="b" id="dl">Скачать чертёж SVG</button>
+      <button class="b alt" id="reset">РЎР±СЂРѕСЃРёС‚СЊ Р·РЅР°С‡РµРЅРёСЏ</button>
     </div>
+    <details id="all"><summary>Р’СЃРµ С€Р°РіРё СЂРµС€РµРЅРёСЏ</summary><div id="steps"></div></details>
   </section>
-  <section class="out">
-    <div class="card">
-      <div class="leg">
-        <span><i style="background:#2563eb"></i>П1 (A1, B1…)</span><span><i style="background:#dc2626"></i>П2 (A2, B2…)</span>
-        <span><i style="background:#059669"></i>П3 (A3…)</span><span><i style="background:#7c3aed"></i>П4 (A4…)</span>
-      </div>
-      <div id="wrap"><svg id="epure" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  <section class="card out">
+    <div class="leg" id="leg"></div>
+    <div id="wrap"><svg id="epure" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <div class="nav">
+      <button class="b alt" id="prev">вЂ№ РЁР°Рі РЅР°Р·Р°Рґ</button>
+      <b id="sn"></b>
+      <button class="b" id="next">РЁР°Рі РІРїРµСЂС‘Рґ вЂє</button>
+      <span class="sp"></span>
+      <button class="b alt" id="done" aria-pressed="false">Р“РѕС‚РѕРІРѕРµ СЂРµС€РµРЅРёРµ</button>
+      <button class="b" id="png">РЎРѕС…СЂР°РЅРёС‚СЊ РІ PNG</button>
+      <button class="b alt" id="dl">РЎРєР°С‡Р°С‚СЊ SVG</button>
     </div>
-    <div class="card" id="steps"></div>
+    <div id="cur"></div>
   </section>
 </main>
 
 <script>
 'use strict';
-/* ====== Константы и данные ====== */
-const K = 5;      // масштаб: пикселей на единицу координат
-const GAP = 30;   // зазор между новой осью и ближайшей проекцией, px
-const COL = {h:'#2563eb', v:'#dc2626', p4:'#059669', p5:'#7c3aed'};
+/* ================= РљРѕРЅСЃС‚Р°РЅС‚С‹ Рё РґР°РЅРЅС‹Рµ ================= */
+const K = 5;      // РјР°СЃС€С‚Р°Р±: РїРёРєСЃРµР»РµР№ РЅР° РµРґРёРЅРёС†Сѓ РєРѕРѕСЂРґРёРЅР°С‚
+const GAP = 30;   // Р·Р°Р·РѕСЂ РјРµР¶РґСѓ РЅРѕРІРѕР№ РѕСЃСЊСЋ Рё Р±Р»РёР¶Р°Р№С€РµР№ РїСЂРѕРµРєС†РёРµР№, px
+const COL = {h:'#2563eb', v:'#dc2626', p3:'#059669', p4:'#7c3aed', tr:'#b45309'};
 const TASKS = {
-  dihedral:{title:'Двугранный угол пирамиды SABC при ребре BS', desc:'Грани ABS и CBS: П2/П1 → П1/П3 → П3/П4', pts:'ABCS'},
-  length:  {title:'Натуральная величина AB, углы α и β', desc:'Длина отрезка, наклон к П1 и к П2', pts:'AB'},
-  dist:    {title:'Расстояние от точки C до прямой AB', desc:'Прямая проецируется в точку', pts:'ABC'}
+  dihedral:{title:'Р­РїСЋСЂ 1: Р”РІСѓРіСЂР°РЅРЅС‹Р№ СѓРіРѕР» РїРёСЂР°РјРёРґС‹ РїСЂРё СЂРµР±СЂРµ BS', desc:'РџРёСЂР°РјРёРґР° SABC, РіСЂР°РЅРё ABS Рё CBS: Рџ2/Рџ1 в†’ Рџ1/Рџ3 в†’ Рџ3/Рџ4', pts:'ABCS',
+            leg:[['Рџ1 (Aв‚Ѓ, Bв‚Ѓ, Cв‚Ѓ, Sв‚Ѓ)',COL.h],['Рџ2 (Aв‚‚, Bв‚‚, Cв‚‚, Sв‚‚)',COL.v],['Рџ3 (Aв‚ѓвЂ¦Sв‚ѓ)',COL.p3],['Рџ4 (Aв‚„вЂ¦Sв‚„)',COL.p4]]},
+  rot:{title:'Р­РїСЋСЂ 2: РСЃС‚РёРЅРЅР°СЏ РІРµР»РёС‡РёРЅР° С‚СЂРµСѓРіРѕР»СЊРЅРёРєР° ABC СЃРїРѕСЃРѕР±РѕРј РІСЂР°С‰РµРЅРёСЏ РІРѕРєСЂСѓРі СЃР»РµРґР°', desc:'Р“РѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹Р№ СЃР»РµРґ Qв‚Ѓ, РїРµСЂРїРµРЅРґРёРєСѓР»СЏСЂС‹, РґСѓРіРё, Aв‚ЂBв‚ЂCв‚Ђ', pts:'ABC',
+       leg:[['Рџ1 (Aв‚Ѓ, Bв‚Ѓ, Cв‚Ѓ)',COL.h],['Рџ2 (Aв‚‚, Bв‚‚, Cв‚‚)',COL.v],['РЎР»РµРґ Qв‚Ѓ, С‚РѕС‡РєРё 1в‚Ѓ, 2в‚Ѓ, 3в‚Ѓ, С†РµРЅС‚СЂ Oв‚Ѓ',COL.tr],['Р.Р’. С‚СЂРµСѓРіРѕР»СЊРЅРёРєР° Aв‚ЂBв‚ЂCв‚Ђ',COL.p4]]}
 };
 const DEF = {A:[70,15,10], B:[20,45,50], C:[95,55,35], S:[40,10,75]};
-let task = 'dihedral';
+let task='dihedral', IT=[], ST=0, STEPS=[], cur=0, VB=null, done=false;
+const $=id=>document.getElementById(id);
 
-/* ====== Векторная математика (2D — чертёж, 3D — проверка) ====== */
+/* ================= Р’РµРєС‚РѕСЂРЅР°СЏ РјР°С‚РµРјР°С‚РёРєР° ================= */
 const sub=(a,b)=>[a[0]-b[0],a[1]-b[1]], add=(a,b)=>[a[0]+b[0],a[1]+b[1]], mul=(a,k)=>[a[0]*k,a[1]*k];
 const dot=(a,b)=>a[0]*b[0]+a[1]*b[1], len=a=>Math.hypot(a[0],a[1]), nrm=a=>mul(a,1/len(a));
 const s3=(a,b)=>a.map((v,i)=>v-b[i]), d3=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2], l3=a=>Math.sqrt(d3(a,a));
 const x3=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
-const deg=r=>r*180/Math.PI;
-const f=x=>(Math.round(x*100)/100).toFixed(2);
+const deg=r=>r*180/Math.PI, f=x=>(Math.round(x*100)/100).toFixed(2);
 const angle2=(a,b)=>deg(Math.acos(Math.max(-1,Math.min(1,dot(a,b)/len(a)/len(b)))));
-/* Эпюр: ось X направлена влево, П1 — под осью (y вниз), П2 — над осью (z вверх) */
+/* Р­РїСЋСЂ: РѕСЃСЊ X РІР»РµРІРѕ, Рџ1 вЂ” РїРѕРґ РѕСЃСЊСЋ (y РІРЅРёР·), Рџ2 вЂ” РЅР°Рґ РѕСЃСЊСЋ (z РІРІРµСЂС…) */
 const H=p=>[-p[0]*K, p[1]*K];
 const V=p=>[-p[0]*K, -p[2]*K];
+const ax=(a,b)=>`X<span class="fr"><i>${a}</i><i>${b}</i></span>`;
 
-/* ====== Замена плоскости проекций ======
-   S — проекции точек на плоскости, которая остаётся; c — «высоты» (расстояния
-   точек до этой плоскости, берутся из заменяемой проекции); n — единичная нормаль
-   новой оси, направленная в сторону точек S.
-   Новая проекция лежит на линии связи (⟂ оси) по другую сторону оси на расстоянии c. */
-function replace(S, c, n){
-  const m = Math.min(...S.map(p=>dot(p,n))) - GAP;      // положение оси вдоль n
-  const F=[], N=S.map((p,i)=>{
-    const d = dot(p,n)-m;                                // расстояние от S-проекции до оси
-    F.push(sub(p,mul(n,d)));                             // основание перпендикуляра на оси
-    return sub(p, mul(n, d + c[i]*K));
-  });
+/* ================= РЎС†РµРЅР°: СЌР»РµРјРµРЅС‚С‹ СЃ РЅРѕРјРµСЂРѕРј С€Р°РіР° ST ================= */
+const line=(a,b,cls,col)=>IT.push({k:'l',s:ST,a,b,cls,col});
+const text=(p,t,col,dx=7,dy=-7,dot=true)=>IT.push({k:'t',s:ST,p,t,col,dx,dy,dot});
+const poly=(a,col)=>IT.push({k:'p',s:ST,a,col});
+function ticks(a,b,k,col){
+  const L=len(sub(b,a)); if(L<1e-6) return; const u=nrm(sub(b,a)), w=[-u[1],u[0]], m=mul(add(a,b),.5);
+  for(let j=0;j<k;j++){const c=add(m,mul(u,(j-(k-1)/2)*8)); line(add(c,add(mul(w,-8),mul(u,-4))),add(c,add(mul(w,8),mul(u,4))),'edge',col);}
+}
+const axisLabel=(p,fr)=>IT.push({k:'f',s:ST,p,fr});
+function arc(c,p1,p2,col){
+  const r=len(sub(p1,c)), a1=Math.atan2(p1[1]-c[1],p1[0]-c[0]), a2=Math.atan2(p2[1]-c[1],p2[0]-c[0]);
+  let df=a2-a1; while(df>Math.PI)df-=2*Math.PI; while(df<-Math.PI)df+=2*Math.PI;
+  const q=add(c,[r*Math.cos(a1+df/2),r*Math.sin(a1+df/2)]), e=add(c,[r*Math.cos(a2),r*Math.sin(a2)]);
+  IT.push({k:'a',s:ST,d:`M${p1} A${r},${r} 0 0 ${df>0?1:0} ${e}`,p1,p2:e,m:q,col});
+  return {mid:a1+df/2,r};
+}
+
+function replace(S,c,n){
+  const m=Math.min(...S.map(p=>dot(p,n)))-GAP, F=[];
+  const N=S.map((p,i)=>{const d=dot(p,n)-m; F.push(sub(p,mul(n,d))); return sub(p,mul(n,d+c[i]*K));});
   return {Q:mul(n,m), t:[-n[1],n[0]], F, N, d:S.map(p=>dot(p,n)-m)};
 }
-
-/* ====== Сцена (SVG) ====== */
-let L=[], T=[], PG=[], AR=[], PT=[];
-const reset=()=>{L=[];T=[];PG=[];AR=[];PT=[]};
-const line=(a,b,cls,col)=>{PT.push(a,b);L.push({a,b,cls,col})};
-const text=(p,s,col,dx=7,dy=-7)=>{PT.push(p);T.push({p,s,col,dx,dy})};
-const poly=(a,col)=>PG.push({a,col});
-const axisLabel=(p,fr)=>{T.push({p,fr,col:'#111'});PT.push(p,add(p,[110,0]),add(p,[0,-45]),add(p,[0,45]))};
-/* Подпись оси в виде дроби: X(Пa/Пb) — числитель над чертой, знаменатель под ней */
-function frac(t,fs){const x=t.p[0],y=t.p[1]-6*fs/13,yl=y-fs*.3,xl=x+fs*.8,w=fs*1.5,a=`font-size="${fs*.8}" fill="#111" text-anchor="middle"`;
-  return `<text x="${x}" y="${y}" font-size="${fs}" fill="#111">X</text><line x1="${xl}" y1="${yl}" x2="${xl+w}" y2="${yl}" stroke="#111"/><text x="${xl+w/2}" y="${yl-fs*.12}" ${a}>${t.fr[0]}</text><text x="${xl+w/2}" y="${yl+fs*.68}" ${a}>${t.fr[1]}</text>`}
-const ax=(a,b)=>`X<span class="fr"><i>${a}</i><i>${b}</i></span>`;   // то же для текста решения
-function axis(r, name, col, extra=[]){
+function normalFor(u){
+  const n=[-u[1],u[0]];
+  return (n[1]>1e-9||(Math.abs(n[1])<=1e-9&&n[0]>0))?mul(n,-1):n;
+}
+function axis(r,name,extra){
   const ss=[...r.F,...r.N,...extra].map(p=>dot(p,r.t)), a=Math.min(...ss)-25, b=Math.max(...ss)+25;
-  line(add(r.Q,mul(r.t,a)), add(r.Q,mul(r.t,b)), 'ax', '#111');
-  axisLabel(add(r.Q,mul(r.t,a)), name);
+  line(add(r.Q,mul(r.t,a)),add(r.Q,mul(r.t,b)),'ax','#111'); axisLabel(add(r.Q,mul(r.t,a)),name);
 }
-function flush(){
-  const xs=PT.map(p=>p[0]), ys=PT.map(p=>p[1]), M=50;
-  const x0=Math.min(...xs)-M, y0=Math.min(...ys)-M, w=Math.max(...xs)-x0+M, h=Math.max(...ys)-y0+M;
-  const fs=Math.max(13, Math.max(w,h)/48), P=p=>p[0].toFixed(1)+','+p[1].toFixed(1);
-  let s=`<style>text{font-family:Georgia,serif;font-style:italic}.cn{stroke:#8a9a9e;stroke-dasharray:5 4;stroke-width:1}
-.ax{stroke-width:1.6}.edge{stroke-width:3}.thin{stroke-width:1.5}</style>`;
-  PG.forEach(g=>s+=`<polygon points="${g.a.map(P).join(' ')}" fill="${g.col}" fill-opacity=".12" stroke="none"/>`);
-  L.forEach(l=>s+=`<line x1="${l.a[0]}" y1="${l.a[1]}" x2="${l.b[0]}" y2="${l.b[1]}" class="${l.cls}" stroke="${l.col||''}"/>`);
-  AR.forEach(a=>s+=`<path d="${a.d}" fill="none" stroke="${a.col}" stroke-width="2"/>`);
-  T.forEach(t=>{ if(t.fr){s+=frac(t,fs);return} s+=`<circle cx="${t.p[0]}" cy="${t.p[1]}" r="${t.dot===0?0:2.6}" fill="${t.col}"/><text x="${t.p[0]+t.dx*fs/13}" y="${t.p[1]+t.dy*fs/13}" font-size="${fs}" fill="${t.col}">${t.s}</text>`;});
-  const e=document.getElementById('epure');
-  e.setAttribute('viewBox',`${x0} ${y0} ${w} ${h}`);
-  e.innerHTML=s;
-}
-/* Рисует одну проекцию: точки, общее ребро, контур пирамиды/отрезки */
-function view(P, names, suf, col, mode){
-  if(mode==='faces'){            // пирамида SABC: порядок точек [B,S,A,C]; грани ABS, CBS и основание ABC
-    poly([P[0],P[1],P[2]],col); poly([P[0],P[1],P[3]],col); poly([P[0],P[2],P[3]],col);
-    [[0,2],[0,3],[1,2],[1,3],[2,3]].forEach(([i,j])=>line(P[i],P[j],'thin',col));   // BA, BC, SA, SC, AC
-  }
-  if(mode==='dist') line(P[0],P[2],'thin',col);
+function shape(P,col){
+  poly([P[0],P[1],P[2]],col); poly([P[0],P[1],P[3]],col); poly([P[0],P[2],P[3]],col);
+  [[0,2],[0,3],[1,2],[1,3],[2,3]].forEach(([i,j])=>line(P[i],P[j],'thin',col));
   line(P[0],P[1],'edge',col);
-  names.forEach((n,i)=>text(P[i],n+suf,col));
 }
 
-/* ====== Выбор нормали оси ====== */
-// Ось x14 проводим параллельно отрезку; нормаль выбираем так, чтобы новая проекция уходила вниз (down) или вверх
-function normalFor(u, down){
-  let n=[-u[1],u[0]];
-  const bad = down ? (n[1]>1e-9||(Math.abs(n[1])<=1e-9&&n[0]>0)) : (n[1]<-1e-9||(Math.abs(n[1])<=1e-9&&n[0]>0));
-  return bad?mul(n,-1):n;
-}
-
-/* ====== Задачи ====== */
-// 1 и 3: общее ребро (BS или AB) → точка (две замены), затем угол / расстояние
-function solveEdge(P, edge, others, dih){
-  const [E0,E1]=edge, E=E0+E1, names=[...edge,...others], pts=names.map(n=>P[n]);
-  const Hs=pts.map(H), Vs=pts.map(V);
-  if(len(sub(Hs[1],Hs[0]))<1e-6) throw new Error(`Проекция ${E0}1${E1}1 вырождается в точку (${E} ⟂ П1). Измените координаты ${E0} или ${E1}.`);
-  const u=nrm(sub(Hs[1],Hs[0]));
-  const r1=replace(Hs, pts.map(p=>p[2]), normalFor(u,true));              // П2 → П4
+/* ================= Р—Р°РґР°С‡Р° 1: РґРІСѓРіСЂР°РЅРЅС‹Р№ СѓРіРѕР» РїСЂРё СЂРµР±СЂРµ BS ================= */
+function solveDihedral(P){
+  const names=['B','S','A','C'], pts=names.map(n=>P[n]), Hs=pts.map(H), Vs=pts.map(V);
+  if(len(sub(Hs[1],Hs[0]))<1e-6) throw new Error('РџСЂРѕРµРєС†РёСЏ B1S1 РІС‹СЂРѕР¶РґР°РµС‚СЃСЏ РІ С‚РѕС‡РєСѓ (BS вџ‚ Рџ1). РР·РјРµРЅРёС‚Рµ РєРѕРѕСЂРґРёРЅР°С‚С‹ B РёР»Рё S.');
+  const r1=replace(Hs,pts.map(p=>p[2]),normalFor(nrm(sub(Hs[1],Hs[0]))));
   let v=nrm(sub(r1.N[1],r1.N[0])); if(v[0]>1e-9||(Math.abs(v[0])<=1e-9&&v[1]>0)) v=mul(v,-1);
-  const r2=replace(r1.N, r1.d.map(d=>d/K), v);                             // П1 → П5
-  const mode=dih?'faces':'dist';
-  // чертёж
-  view(Vs,names,'2',COL.v,mode); view(Hs,names,'1',COL.h,mode); view(r1.N,names,'3',COL.p4,mode);
-  names.forEach((n,i)=>{line(Hs[i],Vs[i],'cn');line(Hs[i],r1.N[i],'cn');line(r1.N[i],r2.N[i],'cn')});
-  const A5=r2.N[0];
-  const Vn=dih?E1:E0;   // вершина, в которую проецируется ребро: S4≡B4 (для BS)
-  text(A5,Vn+'4≡'+(dih?E0:E1)+'4',COL.p5);
-  others.forEach((n,i)=>{const p=r2.N[i+2]; line(A5,p,'edge',COL.p5); text(p,n+'4',COL.p5)});
-  if(dih){ poly([A5,r2.N[2],r2.N[3]],COL.p5); line(r2.N[2],r2.N[3],'thin',COL.p5); }   // основание A4C4 замыкает контур
-  line([-1e4,0],[1e4,0],'ax','#111'); PT.length-=2; // ось x12 (границы ниже)
-  const xs=PT.map(p=>p[0]); L[L.length-1]={a:[Math.min(...xs)-20,0],b:[Math.max(...xs)+20,0],cls:'ax',col:'#111'};
-  axisLabel([Math.min(...xs)-20,0],['П2','П1']);
-  axis(r1,['П1','П3'],'#111',Hs); axis(r2,['П3','П4'],'#111',r1.N);
-  // угол по чертежу
-  const dirs=others.map((n,i)=>sub(r2.N[i+2],A5));
-  let res, an=null;
-  if(dih){
-    const [c,d]=dirs; an=angle2(c,d);
-    const a1=Math.atan2(c[1],c[0]), a2=Math.atan2(d[1],d[0]); let df=a2-a1; while(df>Math.PI)df-=2*Math.PI; while(df<-Math.PI)df+=2*Math.PI;
-    const r=Math.min(45,len(c)*.5,len(d)*.5), p1=add(A5,[r*Math.cos(a1),r*Math.sin(a1)]), p2=add(A5,[r*Math.cos(a2),r*Math.sin(a2)]);
-    AR.push({d:`M${p1} A${r},${r} 0 0 ${df>0?1:0} ${p2}`,col:COL.p5}); PT.push(p1,p2);
-    const am=a1+df/2; text(add(A5,[r*1.5*Math.cos(am),r*1.5*Math.sin(am)]),'φ='+f(an)+'°',COL.p5,0,0);
+  const r2=replace(r1.N,r1.d.map(d=>d/K),v);
+  const S4=r2.N[1], A4=r2.N[2], C4=r2.N[3], dA=sub(A4,S4), dC=sub(C4,S4);
+  const e=s3(P.S,P.B), perp=X=>{const w=s3(X,P.B),k=d3(w,e)/d3(e,e);return w.map((x,i)=>x-k*e[i])};
+  const pa=perp(P.A), pc=perp(P.C);
+  if(l3(pa)<1e-9||l3(pc)<1e-9) throw new Error('РўРѕС‡РєР° A РёР»Рё C Р»РµР¶РёС‚ РЅР° РїСЂСЏРјРѕР№ BS вЂ” РіСЂР°РЅСЊ РІС‹СЂРѕР¶РґР°РµС‚СЃСЏ.');
+  const an=angle2(dA,dC), chk=deg(Math.acos(Math.max(-1,Math.min(1,d3(pa,pc)/l3(pa)/l3(pc)))));
+  const xs=[...Hs,...Vs,...r1.N,...r2.N].map(p=>p[0]), x0=Math.min(...xs)-20, x1=Math.max(...xs)+20;
+  const lab=(P,suf,col)=>names.forEach((n,i)=>text(P[i],n+suf,col));
+  ST=0; line([x0,0],[x1,0],'ax','#111'); axisLabel([x0,0],['Рџ2','Рџ1']); lab(Hs,'_1',COL.h); lab(Vs,'_2',COL.v);
+  ST=1; shape(Hs,COL.h); shape(Vs,COL.v); names.forEach((n,i)=>line(Hs[i],Vs[i],'cn'));
+  ST=2; axis(r1,['Рџ1','Рџ3'],Hs);
+  ST=3; names.forEach((n,i)=>line(Hs[i],r1.N[i],'cn')); lab(r1.N,'_3',COL.p3); shape(r1.N,COL.p3);
+  ST=4; axis(r2,['Рџ3','Рџ4'],r1.N);
+  ST=5; names.forEach((n,i)=>line(r1.N[i],r2.N[i],'cn'));
+  poly([S4,A4,C4],COL.p4); line(S4,A4,'edge',COL.p4); line(S4,C4,'edge',COL.p4); line(A4,C4,'thin',COL.p4);
+  text(S4,'S_4в‰ЎB_4',COL.p4); text(A4,'A_4',COL.p4); text(C4,'C_4',COL.p4);
+  ST=6; const a1=Math.atan2(dA[1],dA[0]), r=Math.min(45,len(dA)*.5,len(dC)*.5);
+  const g=arc(S4,add(S4,mul(nrm(dA),r)),add(S4,mul(nrm(dC),r)),COL.p4);
+  text(add(S4,[r*1.5*Math.cos(g.mid),r*1.5*Math.sin(g.mid)]),'П†='+f(an)+'В°',COL.p4,0,0,false);
+  const X12=ax('Рџ2','Рџ1'), X13=ax('Рџ1','Рџ3'), X34=ax('Рџ3','Рџ4');
+  const sf=k=>names.map(n=>n+k).join(', '), zs=names.map((n,i)=>`${n}: ${f(pts[i][2])}`).join(', '), ds=names.map((n,i)=>`${n}: ${f(r1.d[i]/K)}`).join(', ');
+  STEPS=[
+    `<b>РСЃС…РѕРґРЅС‹Рµ РґР°РЅРЅС‹Рµ.</b> ${names.map((n,i)=>`${n}(${pts[i].map(f).join('; ')})`).join(', ')}. РЎС‚СЂРѕРёРј РѕСЃСЊ ${X12} Рё РїСЂРѕРµРєС†РёРё РІРµСЂС€РёРЅ: РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹Рµ ${sf(1)} (РїРѕРґ РѕСЃСЊСЋ) Рё С„СЂРѕРЅС‚Р°Р»СЊРЅС‹Рµ ${sf(2)} (РЅР°Рґ РѕСЃСЊСЋ).`,
+    `<b>РљРѕРЅС‚СѓСЂ РїРёСЂР°РјРёРґС‹ SABC.</b> РЎРѕРµРґРёРЅСЏРµРј РІРµСЂС€РёРЅС‹: Р±РѕРєРѕРІС‹Рµ СЂС‘Р±СЂР° SA, SB, SC Рё РѕСЃРЅРѕРІР°РЅРёРµ AB, BC, CA вЂ” РЅР° Рџ1 Рё Рџ2 РїРѕР»СѓС‡Р°СЋС‚СЃСЏ Р·Р°РјРєРЅСѓС‚С‹Рµ РєРѕРЅС‚СѓСЂС‹. Р’РµСЂС‚РёРєР°Р»СЊРЅС‹РјРё Р»РёРЅРёСЏРјРё СЃРІСЏР·Рё СЃРѕРµРґРёРЅСЏРµРј РѕРґРЅРѕРёРјС‘РЅРЅС‹Рµ РїСЂРѕРµРєС†РёРё. РћР±С‰РµРµ СЂРµР±СЂРѕ вЂ” BS (РіСЂР°РЅРё ABS Рё CBS).`,
+    `<b>РџРµСЂРІР°СЏ Р·Р°РјРµРЅР° Рџ2 в†’ Рџ3.</b> РќРѕРІСѓСЋ РѕСЃСЊ ${X13} РїСЂРѕРІРѕРґРёРј СЃС‚СЂРѕРіРѕ <b>РїР°СЂР°Р»Р»РµР»СЊРЅРѕ B1S1</b> (РЅР° СЂР°СЃСЃС‚РѕСЏРЅРёРё ${GAP/K} РµРґ. РѕС‚ Р±Р»РёР¶Р°Р№С€РµР№ С‚РѕС‡РєРё), С‡С‚РѕР±С‹ BS СЃС‚Р°Р»Рѕ РїР°СЂР°Р»Р»РµР»СЊРЅС‹Рј Рџ3.`,
+    `<b>РџСЂРѕРµРєС†РёРё РЅР° Рџ3.</b> РР· РєР°Р¶РґРѕР№ С‚РѕС‡РєРё P1 РѕРїСѓСЃРєР°РµРј РїРµСЂРїРµРЅРґРёРєСѓР»СЏСЂ РЅР° РѕСЃСЊ ${X13} Рё РїРѕ РґСЂСѓРіСѓСЋ СЃС‚РѕСЂРѕРЅСѓ РѕСЃРё РѕС‚РєР»Р°РґС‹РІР°РµРј РІС‹СЃРѕС‚Сѓ z (${zs}). РџРѕР»СѓС‡Р°РµРј ${sf(3)}. РћС‚СЂРµР·РѕРє B3S3 вЂ” РёСЃС‚РёРЅРЅР°СЏ РІРµР»РёС‡РёРЅР° BS (Р.Р’.) = <b>${f(len(sub(r1.N[1],r1.N[0]))/K)}</b>.`,
+    `<b>Р’С‚РѕСЂР°СЏ Р·Р°РјРµРЅР° Рџ1 в†’ Рџ4.</b> РћСЃСЊ ${X34} РїСЂРѕРІРѕРґРёРј СЃС‚СЂРѕРіРѕ <b>РїРµСЂРїРµРЅРґРёРєСѓР»СЏСЂРЅРѕ B3S3</b>, С‡С‚РѕР±С‹ BS СЃС‚Р°Р»Рѕ РїРµСЂРїРµРЅРґРёРєСѓР»СЏСЂРЅС‹Рј Рџ4.`,
+    `<b>РџСЂРѕРµРєС†РёРё РЅР° Рџ4.</b> Р›РёРЅРёРё СЃРІСЏР·Рё РїР°СЂР°Р»Р»РµР»СЊРЅС‹ B3S3. РћС‚ РѕСЃРё ${X34} РѕС‚РєР»Р°РґС‹РІР°РµРј СЂР°СЃСЃС‚РѕСЏРЅРёСЏ РѕС‚ С‚РѕС‡РµРє P1 РґРѕ РѕСЃРё ${X13} (${ds}). Р РµР±СЂРѕ BS РїСЂРѕРµС†РёСЂСѓРµС‚СЃСЏ РІ С‚РѕС‡РєСѓ <b>S4в‰ЎB4</b>, РіСЂР°РЅРё ABS Рё CBS вЂ” РІ РѕС‚СЂРµР·РєРё S4A4 Рё S4C4, РѕСЃРЅРѕРІР°РЅРёРµ ABC вЂ” РІ С‚СЂРµСѓРіРѕР»СЊРЅРёРє A4B4C4 (СЃС‚РѕСЂРѕРЅР° A4C4).`,
+    `<b>РР·РјРµСЂРµРЅРёРµ СѓРіР»Р°.</b> Р”РІСѓРіСЂР°РЅРЅС‹Р№ СѓРіРѕР» П† РёР·РјРµСЂСЏРµРј РїСЂРё РІРµСЂС€РёРЅРµ S4в‰ЎB4 РјРµР¶РґСѓ Р»СѓС‡Р°РјРё S4A4 Рё S4C4.<div class="res">П† = <b>${f(an)}В°</b> (Р°РЅР°Р»РёС‚РёС‡РµСЃРєР°СЏ РїСЂРѕРІРµСЂРєР°: ${f(chk)}В°)</div>`
+  ];
+}
+
+/* ================= Р—Р°РґР°С‡Р° 2: РёСЃС‚РёРЅРЅР°СЏ РІРµР»РёС‡РёРЅР° ABC РІСЂР°С‰РµРЅРёРµРј РІРѕРєСЂСѓРі Qв‚Ѓ ================= */
+function solveRot(P){
+  const nm=['A','B','C'], pts=nm.map(n=>P[n]), Hs=pts.map(H), Vs=pts.map(V);
+  const N=x3(s3(P.B,P.A),s3(P.C,P.A)), nl=l3(N);
+  if(nl<1e-9) throw new Error('РўРѕС‡РєРё A, B, C Р»РµР¶Р°С‚ РЅР° РѕРґРЅРѕР№ РїСЂСЏРјРѕР№ вЂ” С‚СЂРµСѓРіРѕР»СЊРЅРёРє РІС‹СЂРѕР¶РґРµРЅ.');
+  if(Math.hypot(N[0],N[1])<1e-9*nl) throw new Error('РџР»РѕСЃРєРѕСЃС‚СЊ РїР°СЂР°Р»Р»РµР»СЊРЅР° Рџ1: СЃР»РµРґ Qв‚Ѓ РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚, A1B1C1 СѓР¶Рµ СЂР°РІРµРЅ РёСЃС‚РёРЅРЅРѕР№ РІРµР»РёС‡РёРЅРµ.');
+  if(Math.abs(N[2])<1e-9*nl) throw new Error('РџР»РѕСЃРєРѕСЃС‚СЊ РїРµСЂРїРµРЅРґРёРєСѓР»СЏСЂРЅР° Рџ1 (РїСЂРѕРµРєС†РёСЏ A1B1C1 вЂ” РѕС‚СЂРµР·РѕРє). РР·РјРµРЅРёС‚Рµ РєРѕРѕСЂРґРёРЅР°С‚С‹.');
+  
+  const c0=d3(N,P.A), q=c0/(N[0]*N[0]+N[1]*N[1]), T0=H([N[0]*q,N[1]*q]), tt=nrm([N[1],N[0]]), nn=[-tt[1],tt[0]];
+  const trp=[]; [[0,1],[1,2],[2,0]].forEach(([i,j])=>{
+    const dz=pts[j][2]-pts[i][2]; if(Math.abs(dz)<1e-9) return;
+    const u=-pts[i][2]/dz, M=[pts[i][0]+(pts[j][0]-pts[i][0])*u, pts[i][1]+(pts[j][1]-pts[i][1])*u];
+    trp.push({i,j,M1:H(M),M2:[-M[0]*K,0],n:trp.length+1});
+  });
+
+  const zLens = Hs.map((p,i) => len(sub(Vs[i], p)));
+  const dd=Hs.map(p=>dot(sub(p,T0),nn)), big=dd.reduce((a,b)=>Math.abs(b)>Math.abs(a)?b:a,0), side0=big>=0?1:-1;
+  const G=Hs.map((p,i)=>{
+    const sg=-(Math.abs(dd[i])<1e-9?side0:Math.sign(dd[i]));
+    const O=sub(p,mul(nn,dd[i])), R=Math.hypot(dd[i], zLens[i]);
+    return {O,R,sg,D:add(p,mul(tt, zLens[i])),Z:add(O,mul(nn,sg*R))};
+  });
+
+  const O_B = G[1].O, R_B = G[1].R, sg_B = G[1].sg;
+  const B0 = add(O_B, mul(nn, sg_B * R_B));
+  const Z_all = [...Hs]; Z_all[1] = B0;
+  const traceLines = [];
+
+  trp.forEach(t => {
+    const M1 = t.M1;
+    if (t.i === 1 || t.j === 1) {
+      const other = (t.i === 1) ? t.j : t.i;
+      const p1 = M1, p2 = B0, p3 = Hs[other], p4 = add(Hs[other], mul(nn, 100));
+      const det = (p2[0]-p1[0])*(p4[1]-p3[1]) - (p2[1]-p1[1])*(p4[0]-p3[0]);
+      if(Math.abs(det) > 1e-5){
+        const t_val = ((p3[0]-p1[0])*(p4[1]-p3[1]) - (p3[1]-p1[1])*(p4[0]-p3[0])) / det;
+        Z_all[other] = [p1[0] + t_val*(p2[0]-p1[0]), p1[1] + t_val*(p2[1]-p1[1])];
+        traceLines.push({a: M1, b: Z_all[other]});
+      }
+    }
+  });
+  for(let i=0; i<3; i++){ if(!Z_all[i]) Z_all[i] = G[i].Z; }
+
+  const xs=[...Hs,...Vs].map(p=>p[0]), x0=Math.min(...xs)-20, x1=Math.max(...xs)+20;
+  const ss=[...Hs,...G.map(g=>g.O),...trp.map(t=>t.M1)].map(p=>dot(p,tt)), s0=Math.min(...ss)-30, s1=Math.max(...ss)+30;
+
+  ST=0; line([x0,0],[x1,0],'ax','#111'); axisLabel([x0,0],['Рџ2','Рџ1']);
+  nm.forEach((n,i)=>{text(Hs[i],n+'_1',COL.h); text(Vs[i],n+'_2',COL.v)});
+  
+  ST=1; [[0,1],[1,2],[2,0]].forEach(([i,j])=>{line(Hs[i],Hs[j],'edge',COL.h); line(Vs[i],Vs[j],'edge',COL.v)});
+  poly(Hs,COL.h); poly(Vs,COL.v); nm.forEach((n,i)=>line(Hs[i],Vs[i],'cn'));
+  
+  ST=2; trp.forEach((t,k)=>{
+    const near=len(sub(Vs[t.i],t.M2))<len(sub(Vs[t.j],t.M2))?t.i:t.j;
+    line(Vs[near],t.M2,'cn'); line(Hs[near],t.M1,'cn'); line(t.M2,t.M1,'cn');
+    if(!trp.slice(0,k).some(o=>len(sub(o.M1,t.M1))<1)){ text(t.M2,t.n+'_2',COL.v); text(t.M1,t.n+'_1',COL.tr); }
+  });
+  
+  ST=3; line(add(T0,mul(tt,s0)),add(T0,mul(tt,s1)),'edge',COL.tr); text(add(T0,mul(tt,s1)),'Q_1',COL.tr,6,-8,false);
+  
+  ST=4; nm.forEach((n,i)=>{
+    const g=G[i]; line(add(g.O,mul(nn,-g.sg*10)),add(g.O,mul(nn,g.sg*(g.R+14))),'cn',COL.tr);
+    if(n==='B') text(g.O,'O_1',COL.tr, 8, 8);
+  });
+
+  ST=5; {
+    const i = 1, n = 'B', g = G[i], k = i + 1;
+    line(Hs[i], g.O, 'thin', COL.tr); 
+    line(Hs[i], g.D, 'thin', COL.tr); 
+    line(g.O, g.D, 'thin', COL.tr);
+    line(Vs[i], Hs[i], 'thin', COL.v); 
+    ticks(Vs[i], Hs[i], k, COL.v); 
+    ticks(Hs[i], g.D, k, COL.tr);
+    text(mul(add(Vs[i], Hs[i]), 0.5), 'z_' + n, COL.v, 6, 0, false);
+    text(g.D, 'z_' + n, COL.tr, 5, 12, false);
+    const u1 = nrm(sub(g.O, Hs[i])), u2 = nrm(sub(g.D, Hs[i])), q = 7;
+    line(add(Hs[i], mul(u1, q)), add(add(Hs[i], mul(u1, q)), mul(u2, q)), 'thin', COL.tr); 
+    line(add(Hs[i], mul(u2, q)), add(add(Hs[i], mul(u2, q)), mul(u1, q)), 'thin', COL.tr);
   }
-  flush();
-  // аналитическая проверка
-  const e=s3(P[E1],P[E0]), perp=X=>{const w=s3(X,P[E0]),k=d3(w,e)/d3(e,e);return w.map((x,i)=>x-k*e[i])};
-  const pc=perp(P[others[0]]);
-  if(l3(pc)<1e-9) throw new Error('Точка '+others[0]+' лежит на прямой '+E+'.');
-  let chk;
-  if(dih){
-    const pd=perp(P[others[1]]); if(l3(pd)<1e-9) throw new Error('Точка '+others[1]+' лежит на прямой '+E+'.');
-    chk=deg(Math.acos(Math.max(-1,Math.min(1,d3(pc,pd)/l3(pc)/l3(pd)))));
-  } else chk=l3(pc);
-  const dd=r1.d.map(d=>f(d/K));
-  const zs=names.map(n=>`${n}: ${f(P[n][2])}`).join(', ');
-  const ds=names.map((n,i)=>`${n}: ${dd[i]}`).join(', ');
-  const X12=ax('П2','П1'), X13=ax('П1','П3'), X34=ax('П3','П4');
-  const sf=k=>names.map(n=>n+k).join(', '), V4=Vn+'4≡'+(dih?E0:E1)+'4', R=others.map(n=>Vn+'4'+n+'4');
-  const steps=[
-    `<b>Исходные данные.</b> ${names.map(n=>`${n}(${P[n].map(f).join('; ')})`).join(', ')}. Строим горизонтальные проекции ${sf(1)} (под осью ${X12}) и фронтальные ${sf(2)} (над осью), соединяя их вертикальными линиями связи.${dih?' Все вершины соединяем: рёбра SA, SB, SC и основание AB, BC, CA — на каждой проекции получается замкнутый контур пирамиды SABC. Общее ребро — BS, грани ABS и CBS.':''}`,
-    `<b>Первая замена П2 → П3.</b> Ось ${X13} проводим строго <b>параллельно ${E0}1${E1}1</b> (на расстоянии ${GAP/K} ед. от ближайшей точки). Из каждой проекции опускаем перпендикуляр на ось и по другую сторону оси откладываем высоту z (${zs}). Получаем ${sf(3)}. Поскольку ${E} ∥ П3, отрезок ${E0}3${E1}3 — натуральная величина ${E} = <b>${f(len(sub(r1.N[1],r1.N[0]))/K)}</b>.`,
-    `<b>Вторая замена П1 → П4.</b> Ось ${X34} проводим строго <b>перпендикулярно ${E0}3${E1}3</b>. Линии связи параллельны ${E0}3${E1}3. От оси ${X34} откладываем расстояния от ${sf(1)} до оси ${X13} (${ds}). Так как ${E} ⟂ П4, ребро проецируется в точку <b>${V4}</b>${dih?', грани ABS и CBS — в отрезки S4A4 и S4C4, а основание ABC — в треугольник A4B4C4 (сторона A4C4)':`, а расстояние от ${others[0]} до ${E} равно отрезку ${R[0]}`}.`,
-    dih?`<b>Измерение.</b> Двугранный угол φ измеряем при вершине ${V4} между лучами ${R[0]} и ${R[1]}.`:`<b>Измерение.</b> Длина ${R[0]} в масштабе чертежа даёт искомое расстояние.`,
-    `<div class="res">${dih?`Двугранный угол φ = <b>${f(an)}°</b> (аналитическая проверка: ${f(chk)}°)`:`Расстояние от ${others[0]} до ${E} = <b>${f(len(dirs[0])/K)}</b> (проверка: ${f(chk)})`}</div>`];
-  return steps;
+
+  ST=6; {
+    const i = 1; arc(G[i].O, G[i].D, G[i].Z, COL.p4);
+    traceLines.forEach(l => line(l.a, l.b, 'cn', COL.p4));
+  }
+  const Z=Z_all; poly(Z,COL.p4); [[0,1],[1,2],[2,0]].forEach(([i,j])=>line(Z[i],Z[j],'edge',COL.p4));
+  nm.forEach((n,i)=>text(Z[i],n+'_0',COL.p4));
+  const cz=mul(add(add(Z[0],Z[1]),Z[2]),1/3); text(cz,'Р.Р’.',COL.p4,-14,5,false);
+  
+  const sd=[[0,1],[1,2],[2,0]].map(([i,j])=>len(sub(Z[i],Z[j]))/K), tr=[[0,1],[1,2],[2,0]].map(([i,j])=>l3(s3(pts[i],pts[j])));
+  const area=Math.abs((Z[1][0]-Z[0][0])*(Z[2][1]-Z[0][1])-(Z[2][0]-Z[0][0])*(Z[1][1]-Z[0][1]))/2/K/K;
+  const X12=ax('Рџ2','Рџ1');
+
+  STEPS=[
+    `<b>РСЃС…РѕРґРЅС‹Рµ РґР°РЅРЅС‹Рµ.</b> ${nm.map((n,i)=>`${n}(${pts[i].map(f).join('; ')})`).join(', ')}. РЎС‚СЂРѕРёРј РѕСЃСЊ ${X12}, РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹Рµ РїСЂРѕРµРєС†РёРё A1, B1, C1 (РїРѕРґ РѕСЃСЊСЋ) Рё С„СЂРѕРЅС‚Р°Р»СЊРЅС‹Рµ A2, B2, C2 (РЅР°Рґ РѕСЃСЊСЋ).`,
+    `<b>РџСЂРѕРµРєС†РёРё С‚СЂРµСѓРіРѕР»СЊРЅРёРєР°.</b> РЎРѕРµРґРёРЅСЏРµРј С‚РѕС‡РєРё: РїРѕР»СѓС‡Р°РµРј A1B1C1 Рё A2B2C2. РћРґРЅРѕРёРјС‘РЅРЅС‹Рµ РїСЂРѕРµРєС†РёРё СЃРІСЏР·С‹РІР°РµРј РІРµСЂС‚РёРєР°Р»СЊРЅС‹РјРё Р»РёРЅРёСЏРјРё СЃРІСЏР·Рё.`,
+    `<b>РЎР»РµРґС‹ СЃС‚РѕСЂРѕРЅ (С‚РѕС‡РєРё 1, 2, 3).</b> РџСЂРѕРґРѕР»Р¶Р°РµРј С„СЂРѕРЅС‚Р°Р»СЊРЅСѓСЋ РїСЂРѕРµРєС†РёСЋ СЃС‚РѕСЂРѕРЅС‹ РґРѕ РїРµСЂРµСЃРµС‡РµРЅРёСЏ СЃ РѕСЃСЊСЋ ${X12} (С‚РѕС‡РєРё 1в‚‚, 2в‚‚, 3в‚‚), РѕРїСѓСЃРєР°РµРј Р»РёРЅРёСЋ СЃРІСЏР·Рё РЅР° РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅСѓСЋ РїСЂРѕРµРєС†РёСЋ С‚РѕР№ Р¶Рµ СЃС‚РѕСЂРѕРЅС‹ вЂ” РїРѕР»СѓС‡Р°РµРј С‚РѕС‡РєРё 1в‚Ѓ, 2в‚Ѓ, 3в‚Ѓ, РІ РєРѕС‚РѕСЂС‹С… СЃС‚РѕСЂРѕРЅС‹ РїСЂРѕРЅР·Р°СЋС‚ Рџ1. ${trp.length<3?'РЎС‚РѕСЂРѕРЅР°, РїР°СЂР°Р»Р»РµР»СЊРЅР°СЏ Рџ1, СЃР»РµРґР° РЅРµ РёРјРµРµС‚. ':''}РќР°Р№РґРµРЅРѕ С‚РѕС‡РµРє: ${trp.length}.`,
+    `<b>Р“РѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹Р№ СЃР»РµРґ Qв‚Ѓ.</b> РџСЂСЏРјР°СЏ, РїСЂРѕС…РѕРґСЏС‰Р°СЏ С‡РµСЂРµР· С‚РѕС‡РєРё 1в‚Ѓ, 2в‚Ѓ, 3в‚Ѓ, вЂ” РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹Р№ СЃР»РµРґ РїР»РѕСЃРєРѕСЃС‚Рё С‚СЂРµСѓРіРѕР»СЊРЅРёРєР°. Р­С‚Рѕ РѕСЃСЊ РІСЂР°С‰РµРЅРёСЏ: РїР»РѕСЃРєРѕСЃС‚СЊ ABC СЃРѕРІРјРµС‰Р°РµРј СЃ Рџ1, РїРѕРІРѕСЂР°С‡РёРІР°СЏ РµС‘ РІРѕРєСЂСѓРі Qв‚Ѓ.`,
+    `<b>РџРµСЂРїРµРЅРґРёРєСѓР»СЏСЂС‹ Рє СЃР»РµРґСѓ.</b> РР· РІРµСЂС€РёРЅ A1, B1, C1 РѕРїСѓСЃРєР°РµРј РїРµСЂРїРµРЅРґРёРєСѓР»СЏСЂС‹ РЅР° СЃР»РµРґ Qв‚Ѓ. Р¦РµРЅС‚СЂ РІСЂР°С‰РµРЅРёСЏ (Oв‚Ѓ) РѕС‚РјРµС‡Р°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РґР»СЏ СЃСЂРµРґРЅРµР№ РІРµСЂС€РёРЅС‹ Bв‚Ѓ, Р° РґР»СЏ РѕСЃС‚Р°Р»СЊРЅС‹С… РїРµСЂРїРµРЅРґРёРєСѓР»СЏСЂС‹ РёРґСѓС‚ РґР°Р»СЊС€Рµ РєР°Рє Р»РёРЅРёРё РїРµСЂРµРјРµС‰РµРЅРёСЏ С‚РѕС‡РµРє.`,
+    `<b>РџСЂСЏРјРѕСѓРіРѕР»СЊРЅС‹Р№ С‚СЂРµСѓРіРѕР»СЊРЅРёРє (РёСЃС‚РёРЅРЅС‹Р№ СЂР°РґРёСѓСЃ РІСЂР°С‰РµРЅРёСЏ).</b> Р”Р»СЏ Р±Р°Р·РѕРІРѕР№ РІРµСЂС€РёРЅС‹ B СЃС‚СЂРѕРёРј РїСЂСЏРјРѕСѓРіРѕР»СЊРЅС‹Р№ С‚СЂРµСѓРіРѕР»СЊРЅРёРє. РљР°С‚РµС‚ 1 вЂ” РѕС‚СЂРµР·РѕРє РґРѕ СЃР»РµРґР°. РљР°С‚РµС‚ 2 вЂ” РІС‹СЃРѕС‚Р° z<sub>B</sub> (РёР·РјРµСЂСЏРµС‚СЃСЏ РЅР°РїСЂСЏРјСѓСЋ РѕС‚ Bв‚‚ РґРѕ Bв‚Ѓ РїРѕ Р»РёРЅРёРё СЃРІСЏР·Рё). Р Р°РІРµРЅСЃС‚РІРѕ РѕС‚СЂРµР·РєРѕРІ РїРѕРєР°Р·Р°РЅРѕ С€С‚СЂРёС…Р°РјРё В«//В». Р“РёРїРѕС‚РµРЅСѓР·Р° вЂ” РёСЃС‚РёРЅРЅС‹Р№ СЂР°РґРёСѓСЃ РІСЂР°С‰РµРЅРёСЏ РґР»СЏ B.`,
+    `<b>Р”СѓРіР° РІСЂР°С‰РµРЅРёСЏ Рё РёСЃС‚РёРЅРЅР°СЏ РІРµР»РёС‡РёРЅР°.</b> РР· С†РµРЅС‚СЂР° Oв‚Ѓ РїСЂРѕРІРѕРґРёРј РґСѓРіСѓ СЂР°РґРёСѓСЃРѕРј R РґРѕ РїРµСЂРµСЃРµС‡РµРЅРёСЏ СЃ РїРµСЂРїРµРЅРґРёРєСѓР»СЏСЂРѕРј вЂ” РїРѕР»СѓС‡Р°РµРј С‚РѕС‡РєСѓ Bв‚Ђ. РЎРѕРµРґРёРЅСЏСЏ СЃР»РµРґС‹ СЃС‚РѕСЂРѕРЅ СЃ С‚РѕС‡РєРѕР№ Bв‚Ђ Рё РЅР°С…РѕРґСЏ РїРµСЂРµСЃРµС‡РµРЅРёРµ СЃ РїРµСЂРїРµРЅРґРёРєСѓР»СЏСЂР°РјРё, РїРѕР»СѓС‡Р°РµРј С‚РѕС‡РєРё Aв‚Ђ Рё Cв‚Ђ (РїРѕРєР°Р·Р°РЅРѕ РїСѓРЅРєС‚РёСЂРѕРј). РўСЂРµСѓРіРѕР»СЊРЅРёРє Aв‚ЂBв‚ЂCв‚Ђ вЂ” РёСЃС‚РёРЅРЅР°СЏ РІРµР»РёС‡РёРЅР° (Р.Р’.).<div class="res">AB = <b>${f(sd[0])}</b>, BC = <b>${f(sd[1])}</b>, CA = <b>${f(sd[2])}</b>; РїР»РѕС‰Р°РґСЊ = <b>${f(area)}</b><br><small>РџСЂРѕРІРµСЂРєР° РїРѕ РєРѕРѕСЂРґРёРЅР°С‚Р°Рј: AB=${f(tr[0])}, BC=${f(tr[1])}, CA=${f(tr[2])}; S=${f(nl/2)}</small></div>`
+  ];
 }
 
-// 2: натуральная величина и углы наклона
-function solveLength(P){
-  const A=P.A,B=P.B, Hs=[H(A),H(B)], Vs=[V(A),V(B)];
-  const dH=sub(Hs[1],Hs[0]), dV=sub(Vs[1],Vs[0]);
-  if(len(dH)<1e-6||len(dV)<1e-6) throw new Error('Отрезок перпендикулярен П1 или П2 — одна из проекций вырождается в точку. Измените координаты.');
-  const r1=replace(Hs,[A[2],B[2]],normalFor(nrm(dH),true));    // x14 ∥ A′B′
-  const r2=replace(Vs,[A[1],B[1]],normalFor(nrm(dV),false));   // x25 ∥ A″B″
-  const names=['A','B'];
-  view(Vs,names,'2',COL.v,'seg'); view(Hs,names,'1',COL.h,'seg');
-  view(r1.N,names,'3',COL.p4,'seg'); view(r2.N,names,'4',COL.p5,'seg');
-  [0,1].forEach(i=>{line(Hs[i],Vs[i],'cn');line(Hs[i],r1.N[i],'cn');line(Vs[i],r2.N[i],'cn')});
-  const xs=PT.map(p=>p[0]); const xa=[Math.min(...xs)-20,Math.max(...xs)+20];
-  line([xa[0],0],[xa[1],0],'ax','#111'); axisLabel([xa[0],0],['П2','П1']);
-  axis(r1,['П1','П3'],'#111',Hs); axis(r2,['П2','П4'],'#111',Vs);
-  const v4=sub(r1.N[1],r1.N[0]), v5=sub(r2.N[1],r2.N[0]);
-  const al=Math.min(angle2(v4,r1.t),180-angle2(v4,r1.t)), be=Math.min(angle2(v5,r2.t),180-angle2(v5,r2.t));
-  text(add(r1.N[0],mul(v4,.5)),'|AB|='+f(len(v4)/K)+', α='+f(al)+'°',COL.p4,8,16);
-  text(add(r2.N[0],mul(v5,.5)),'|AB|='+f(len(v5)/K)+', β='+f(be)+'°',COL.p5,8,-10);
-  flush();
-  const e=s3(B,A), Lr=l3(e);
-  const X13=ax('П1','П3'), X24=ax('П2','П4');
-  return [
-    `<b>Исходные данные.</b> A(${A.map(f).join('; ')}), B(${B.map(f).join('; ')}). Строим A1B1 и A2B2 на эпюре.`,
-    `<b>Замена П2 → П3.</b> Ось ${X13} параллельно A1B1. От оси на линиях связи откладываем высоты zA=${f(A[2])}, zB=${f(B[2])}. Отрезок A3B3 — натуральная величина AB (AB ∥ П3), а его угол с осью — угол наклона <b>α</b> к П1 = <b>${f(al)}°</b>.`,
-    `<b>Замена П1 → П4.</b> Ось ${X24} параллельно A2B2. От неё откладываем глубины yA=${f(A[1])}, yB=${f(B[1])}. A4B4 = |AB| (AB ∥ П4), угол с осью — угол наклона <b>β</b> к П2 = <b>${f(be)}°</b>.`,
-    `<div class="res">|AB| = <b>${f(len(v4)/K)}</b>; α = <b>${f(al)}°</b>; β = <b>${f(be)}°</b><br><small>Проверка: |AB|=${f(Lr)}, α=${f(deg(Math.asin(Math.abs(e[2])/Lr)))}°, β=${f(deg(Math.asin(Math.abs(e[1])/Lr)))}°</small></div>`];
+/* ================= РћС‚СЂРёСЃРѕРІРєР° Рё РїРѕС€Р°РіРѕРІС‹Р№ СЂРµР¶РёРј ================= */
+const STYLE=`<style>text{font-family:Georgia,serif;font-style:italic}.cn{stroke:#8a9a9e;stroke-dasharray:5 4;stroke-width:1}.ax{stroke-width:1.6}.edge{stroke-width:3}.thin{stroke-width:1.5}</style>`;
+function frac(t,fs){
+  const x=t.p[0], y=t.p[1]-6*fs/13, yl=y-fs*.3, xl=x+fs*.8, w=fs*1.5, a=`font-size="${fs*.8}" fill="#111" text-anchor="middle"`;
+  return `<text x="${x}" y="${y}" font-size="${fs}" fill="#111">X</text><line x1="${xl}" y1="${yl}" x2="${xl+w}" y2="${yl}" stroke="#111"/><text x="${xl+w/2}" y="${yl-fs*.12}" ${a}>${t.fr[0]}</text><text x="${xl+w/2}" y="${yl+fs*.68}" ${a}>${t.fr[1]}</text>`;
 }
+function fit(){
+  const q=[]; IT.forEach(i=>{
+    if(i.k==='l')q.push(i.a,i.b); else if(i.k==='t')q.push(i.p); else if(i.k==='p')q.push(...i.a);
+    else if(i.k==='a')q.push(i.p1,i.p2,i.m); else q.push(i.p,add(i.p,[110,0]),add(i.p,[0,-45]),add(i.p,[0,45]));
+  });
+  const xs=q.map(p=>p[0]), ys=q.map(p=>p[1]), M=50, x0=Math.min(...xs)-M, y0=Math.min(...ys)-M;
+  const w=Math.max(...xs)-x0+M, h=Math.max(...ys)-y0+M;
+  VB={x0,y0,w,h,fs:Math.max(13,Math.max(w,h)/48)};
+}
+function lbl(t,fs){
+  const parts=String(t).split(/_(\w)/), sh=fs*.28; let o='', afterSub=false;
+  parts.forEach((s,i)=>{
+    if(i%2===0){ if(s!==''){o+=`<tspan${afterSub?` dy="${-sh}"`:''}>${s}</tspan>`; afterSub=false;} }
+    else { o+=`<tspan dy="${afterSub?0:sh}" font-size="${fs*.7}">${s}</tspan>`; afterSub=true; }
+  });
+  return o;
+}
+function paint(){
+  const last=STEPS.length-1, c=done?last:cur, v=IT.filter(i=>i.s<=c), fs=VB.fs, P=p=>p[0].toFixed(1)+','+p[1].toFixed(1);
+  let s=STYLE+`<rect x="${VB.x0}" y="${VB.y0}" width="${VB.w}" height="${VB.h}" fill="#fff"/>`;
+  v.filter(i=>i.k==='p').forEach(g=>s+=`<polygon points="${g.a.map(P).join(' ')}" fill="${g.col}" fill-opacity=".12"/>`);
+  v.filter(i=>i.k==='l').forEach(l=>s+=`<line x1="${l.a[0]}" y1="${l.a[1]}" x2="${l.b[0]}" y2="${l.b[1]}" class="${l.cls}" stroke="${l.col||''}"/>`);
+  v.filter(i=>i.k==='a').forEach(a=>s+=`<path d="${a.d}" fill="none" stroke="${a.col}" stroke-width="2"/>`);
+  
+  // РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РѕР±СЉРµРґРёРЅРµРЅРёРµ РїРµСЂРµСЃРµРєР°СЋС‰РёС…СЃСЏ/СЃРѕРІРїР°РґР°СЋС‰РёС… С‚РµРєСЃС‚РѕРІС‹С… РјРµС‚РѕРє С‚РѕС‡РµРє
+  const textMap = new Map();
+  v.filter(i=>i.k==='t').forEach(t => {
+    let key = null;
+    for(let k of textMap.keys()) {
+      const [x, y] = k.split(',').map(Number);
+      if(Math.hypot(x - t.p[0], y - t.p[1]) < 4) { key = k; break; }
+    }
+    if(!key) {
+      key = `${Math.round(t.p[0])},${Math.round(t.p[1])}`;
+      textMap.set(key, {p: t.p, col: t.col, dx: t.dx, dy: t.dy, dot: t.dot, texts: []});
+    }
+    const entry = textMap.get(key);
+    if(!entry.texts.includes(t.t)) entry.texts.push(t.t);
+  });
 
-/* ====== Интерфейс ====== */
+  textMap.forEach(cl => {
+    const combinedText = cl.texts.join(' = ');
+    s += `${cl.dot?`<circle cx="${cl.p[0]}" cy="${cl.p[1]}" r="2.6" fill="${cl.col}"/>`:''}<text x="${cl.p[0]+cl.dx*fs/13}" y="${cl.p[1]+cl.dy*fs/13}" font-size="${fs}" fill="${cl.col}">${lbl(combinedText,fs)}</text>`;
+  });
+
+  v.filter(i=>i.k==='f').forEach(t=>s+=frac(t,fs));
+  const e=$('epure'); e.setAttribute('viewBox',`${VB.x0} ${VB.y0} ${VB.w} ${VB.h}`); e.innerHTML=s;
+  $('sn').textContent=done?'Р“РѕС‚РѕРІРѕРµ СЂРµС€РµРЅРёРµ':`РЁР°Рі ${cur+1} РёР· ${STEPS.length}`;
+  $('prev').disabled=!done&&cur===0; $('next').disabled=done||cur>=last;
+  $('done').classList.toggle('on',done);$('done').classList.toggle('alt',!done); $('done').setAttribute('aria-pressed',done);$('cur').innerHTML=STEPS[c];
+}
+const subs=h=>h.replace(/(?<![A-Za-z])([ABCSO])([0-4])(?![0-9])/g,'$1<sub>$2</sub>');
 function build(){
-  const tk=document.getElementById('tasks'), pt=document.getElementById('pts');
   Object.entries(TASKS).forEach(([id,t])=>{
     const b=document.createElement('button'); b.className='task'; b.dataset.id=id;
-    b.innerHTML=`<b>${t.title}</b><small>${t.desc}</small>`;
-    b.onclick=()=>{task=id;render()}; tk.appendChild(b);
+    b.innerHTML=`<b>${t.title}</b><small>${t.desc}</small>`; b.onclick=()=>{task=id;cur=0;render()}; $('tasks').appendChild(b);
   });
-  pt.innerHTML='<div class="pt"><span></span><span class="h">X</span><span class="h">Y</span><span class="h">Z</span></div>';
+  $('pts').innerHTML='<div class="pt"><span></span><span class="h">X</span><span class="h">Y</span><span class="h">Z</span></div>';
   for(const n of 'ABCS'){
     const r=document.createElement('div'); r.className='pt'; r.id='row'+n;
     r.innerHTML=`<b>${n}</b>`+[0,1,2].map(i=>`<input type="number" step="any" id="${n}${i}" aria-label="${n} ${'XYZ'[i]}">`).join('');
-    pt.appendChild(r);
+    $('pts').appendChild(r);
   }
-  fill();
-  pt.addEventListener('input',render);
+  fill(); $('pts').addEventListener('input',render);
 }
-function fill(){ for(const n in DEF) DEF[n].forEach((v,i)=>document.getElementById(n+i).value=v); }
+function fill(){ for(const n in DEF) DEF[n].forEach((v,i)=>$(n+i).value=v); }
 function render(){
   document.querySelectorAll('.task').forEach(b=>b.classList.toggle('on',b.dataset.id===task));
-  const used=TASKS[task].pts;
-  for(const n of 'ABCS') document.getElementById('row'+n).hidden=!used.includes(n);
-  const P={}; for(const n of used) P[n]=[0,1,2].map(i=>parseFloat(document.getElementById(n+i).value)||0);
-  const box=document.getElementById('steps');
-  reset();
+  const T=TASKS[task]; $('leg').innerHTML=T.leg.map(([n,c])=>`<span><i style="background:${c}"></i>${n}</span>`).join('');
+  for(const n of 'ABCS') $('row'+n).hidden=!T.pts.includes(n);
+  const P={}; for(const n of T.pts) P[n]=[0,1,2].map(i=>parseFloat($(n+i).value)||0);
+  IT=[]; STEPS=[]; ST=0;
   try{
-    const steps = task==='dihedral'?solveEdge(P,['B','S'],['A','C'],true) : task==='dist'?solveEdge(P,['A','B'],['C'],false) : solveLength(P);
-    box.innerHTML='<h2>Пошаговое решение</h2><ol>'+steps.slice(0,-1).map(s=>`<li>${s}</li>`).join('')+'</ol>'+steps[steps.length-1];
-  }catch(e){
-    document.getElementById('epure').innerHTML=''; box.innerHTML=`<p class="err">${e.message}</p>`;
+    (task==='dihedral'?solveDihedral:solveRot)(P);
+    STEPS=STEPS.map(subs);
+    cur=Math.min(cur,STEPS.length-1); fit(); paint();
+    $('steps').innerHTML='<ol>'+STEPS.map(s=>`<li>${s}</li>`).join('')+'</ol>';
+    $('png').disabled=$('dl').disabled=$('done').disabled=false;
+  }catch(err){
+    $('epure').innerHTML='';$('cur').innerHTML=`<p class="err">${err.message}</p>`; $('steps').innerHTML='';
+    $('sn').textContent='';$('prev').disabled=$('next').disabled=$('png').disabled=$('dl').disabled=$('done').disabled=true;
   }
 }
-document.getElementById('reset').onclick=()=>{fill();render()};
-document.getElementById('dl').onclick=()=>{
-  const e=document.getElementById('epure'), s=e.outerHTML.replace('<svg','<svg width="1000"');
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([s],{type:'image/svg+xml'})); a.download='epure.svg'; a.click();
+$('prev').onclick=()=>{   if(done){done=false;cur=Math.max(0,STEPS.length-2)} else if(cur>0)cur--;   paint(); };$('next').onclick=()=>{if(!done&&cur<STEPS.length-1){cur++;paint()}};
+$('done').onclick=()=>{done=!done;paint()};$('reset').onclick=()=>{fill();render()};
+const svgXml=(w,h)=>{
+  const e=$('epure').cloneNode(true); e.setAttribute('width',w); e.setAttribute('height',h); e.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  return new XMLSerializer().serializeToString(e);
+};
+const save=(url,name)=>{const a=document.createElement('a'); a.href=url; a.download=name; a.click()};
+$('dl').onclick=()=>save(URL.createObjectURL(new Blob([svgXml(1000,Math.round(1000*VB.h/VB.w))],{type:'image/svg+xml'})),'epure.svg');$('png').onclick=()=>{
+  const W=2400, Hh=Math.min(6000,Math.round(W*VB.h/VB.w)), img=new Image();
+  img.onload=()=>{
+    const c=document.createElement('canvas'); c.width=W; c.height=Hh; const g=c.getContext('2d');
+    g.fillStyle='#fff'; g.fillRect(0,0,W,Hh); g.drawImage(img,0,0,W,Hh);
+    c.toBlob(b=>save(URL.createObjectURL(b),done?'epure-gotovoe-reshenie.png':`epure-shag${cur+1}.png`),'image/png');
+  };
+  img.onerror=()=>alert('РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ PNG. РџРѕРїСЂРѕР±СѓР№С‚Рµ В«РЎРєР°С‡Р°С‚СЊ SVGВ».');
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgXml(W,Hh));
 };
 build(); render();
 </script>

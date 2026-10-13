@@ -50,6 +50,8 @@ details li{margin-bottom:8px}
 summary{cursor:pointer;font-weight:600}
 .fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.72em;line-height:1.1;margin:0 1px}
 .fr i{font-style:normal;padding:0 2px}.fr i:first-child{border-bottom:1px solid currentColor}
+.pick{margin:10px 0 2px;display:grid;gap:4px}
+.pick select{padding:6px;border:1px solid var(--line);border-radius:6px;font:inherit;background:#fff}
 sub{font-size:.7em;line-height:0}
 @media(max-width:900px){
   body{height:auto;overflow:auto;display:block}
@@ -72,6 +74,10 @@ sub{font-size:.7em;line-height:0}
     <div id="tasks"></div>
     <h2>Координаты точек (X, Y, Z)</h2>
     <div id="pts"></div>
+    <div class="pick" id="baseBox" hidden>
+      <label for="base"><b>Базовая точка для радиуса:</b></label>
+      <select id="base"><option value="0">A</option><option value="1" selected>B</option><option value="2">C</option></select>
+    </div>
     <div class="btns">
       <button class="b alt" id="reset">Сбросить значения</button>
     </div>
@@ -198,6 +204,7 @@ function solveDihedral(P){
 /* ================= Задача 2: истинная величина ABC вращением вокруг Q₁ ================= */
 function solveRot(P){
   const nm=['A','B','C'], pts=nm.map(n=>P[n]), Hs=pts.map(H), Vs=pts.map(V);
+  const bv=parseInt($('base').value), bi=[0,1,2].includes(bv)?bv:1, bn=nm[bi];   // базовая вершина: 0=A, 1=B, 2=C
   const N=x3(s3(P.B,P.A),s3(P.C,P.A)), nl=l3(N);
   if(nl<1e-9) throw new Error('Точки A, B, C лежат на одной прямой — треугольник вырожден.');
   if(Math.hypot(N[0],N[1])<1e-9*nl) throw new Error('Плоскость параллельна П1: след Q₁ не существует, A1B1C1 уже равен истинной величине.');
@@ -210,7 +217,7 @@ function solveRot(P){
     trp.push({i,j,M1:H(M),M2:[-M[0]*K,0],n:trp.length+1});
   });
 
-  const zLens = Hs.map((p,i) => len(sub(Vs[i], p)));
+  const zLens = pts.map(p => Math.abs(p[2])*K);
   const dd=Hs.map(p=>dot(sub(p,T0),nn)), big=dd.reduce((a,b)=>Math.abs(b)>Math.abs(a)?b:a,0), side0=big>=0?1:-1;
   const G=Hs.map((p,i)=>{
     const sg=-(Math.abs(dd[i])<1e-9?side0:Math.sign(dd[i]));
@@ -218,22 +225,19 @@ function solveRot(P){
     return {O,R,sg,D:add(p,mul(tt, zLens[i])),Z:add(O,mul(nn,sg*R))};
   });
 
-  const O_B = G[1].O, R_B = G[1].R, sg_B = G[1].sg;
-  const B0 = add(O_B, mul(nn, sg_B * R_B));
-  const Z_all = [...Hs]; Z_all[1] = B0;
+  const B0 = G[bi].Z, Z_all = [null,null,null]; Z_all[bi] = B0;
   const traceLines = [];
 
   trp.forEach(t => {
-    const M1 = t.M1;
-    if (t.i === 1 || t.j === 1) {
-      const other = (t.i === 1) ? t.j : t.i;
-      const p1 = M1, p2 = B0, p3 = Hs[other], p4 = add(Hs[other], mul(nn, 100));
-      const det = (p2[0]-p1[0])*(p4[1]-p3[1]) - (p2[1]-p1[1])*(p4[0]-p3[0]);
-      if(Math.abs(det) > 1e-5){
-        const t_val = ((p3[0]-p1[0])*(p4[1]-p3[1]) - (p3[1]-p1[1])*(p4[0]-p3[0])) / det;
-        Z_all[other] = [p1[0] + t_val*(p2[0]-p1[0]), p1[1] + t_val*(p2[1]-p1[1])];
-        traceLines.push({a: M1, b: Z_all[other]});
-      }
+    if (t.i !== bi && t.j !== bi) return;
+    const other = (t.i === bi) ? t.j : t.i, M1 = t.M1;
+    const p1 = M1, p2 = B0, p3 = Hs[other], p4 = add(Hs[other], mul(nn, 100));
+    const det = (p2[0]-p1[0])*(p4[1]-p3[1]) - (p2[1]-p1[1])*(p4[0]-p3[0]);
+    if(Math.abs(det) > 1e-5){
+      const tv = ((p3[0]-p1[0])*(p4[1]-p3[1]) - (p3[1]-p1[1])*(p4[0]-p3[0])) / det;
+      const X = [p1[0] + tv*(p2[0]-p1[0]), p1[1] + tv*(p2[1]-p1[1])];
+      Z_all[other] = X;
+      traceLines.push({a: M1, b: len(sub(B0,M1)) > len(sub(X,M1)) ? B0 : X});
     }
   });
   for(let i=0; i<3; i++){ if(!Z_all[i]) Z_all[i] = G[i].Z; }
@@ -257,26 +261,28 @@ function solveRot(P){
   
   ST=4; nm.forEach((n,i)=>{
     const g=G[i]; line(add(g.O,mul(nn,-g.sg*10)),add(g.O,mul(nn,g.sg*(g.R+14))),'cn',COL.tr);
-    if(n==='B') text(g.O,'O_1',COL.tr, 8, 8);
+    if(i===bi) text(g.O,'O_1',COL.tr, 8, 8);
   });
 
   ST=5; {
-    const i = 1, n = 'B', g = G[i], k = i + 1;
+    const i = bi, n = bn, g = G[i], k = i + 1, Ax = [Vs[i][0], 0];
     line(Hs[i], g.O, 'thin', COL.tr); 
     line(Hs[i], g.D, 'thin', COL.tr); 
     line(g.O, g.D, 'thin', COL.tr);
-    line(Vs[i], Hs[i], 'thin', COL.v); 
-    ticks(Vs[i], Hs[i], k, COL.v); 
+    line(Vs[i], Ax, 'thin', COL.v); 
+    ticks(Vs[i], Ax, k, COL.v); 
     ticks(Hs[i], g.D, k, COL.tr);
-    text(mul(add(Vs[i], Hs[i]), 0.5), 'z_' + n, COL.v, 6, 0, false);
+    text(mul(add(Vs[i], Ax), 0.5), 'z_' + n, COL.v, 6, 0, false);
     text(g.D, 'z_' + n, COL.tr, 5, 12, false);
-    const u1 = nrm(sub(g.O, Hs[i])), u2 = nrm(sub(g.D, Hs[i])), q = 7;
-    line(add(Hs[i], mul(u1, q)), add(add(Hs[i], mul(u1, q)), mul(u2, q)), 'thin', COL.tr); 
-    line(add(Hs[i], mul(u2, q)), add(add(Hs[i], mul(u2, q)), mul(u1, q)), 'thin', COL.tr);
+    if(len(sub(g.O, Hs[i]))>1e-6 && len(sub(g.D, Hs[i]))>1e-6){
+      const u1 = nrm(sub(g.O, Hs[i])), u2 = nrm(sub(g.D, Hs[i])), q = 7;
+      line(add(Hs[i], mul(u1, q)), add(add(Hs[i], mul(u1, q)), mul(u2, q)), 'thin', COL.tr); 
+      line(add(Hs[i], mul(u2, q)), add(add(Hs[i], mul(u2, q)), mul(u1, q)), 'thin', COL.tr);
+    }
   }
 
   ST=6; {
-    const i = 1; arc(G[i].O, G[i].D, G[i].Z, COL.p4);
+    const i = bi; arc(G[i].O, G[i].D, G[i].Z, COL.p4);
     traceLines.forEach(l => line(l.a, l.b, 'cn', COL.p4));
   }
   const Z=Z_all; poly(Z,COL.p4); [[0,1],[1,2],[2,0]].forEach(([i,j])=>line(Z[i],Z[j],'edge',COL.p4));
@@ -292,9 +298,9 @@ function solveRot(P){
     `<b>Проекции треугольника.</b> Соединяем точки: получаем A1B1C1 и A2B2C2. Одноимённые проекции связываем вертикальными линиями связи.`,
     `<b>Следы сторон (точки 1, 2, 3).</b> Продолжаем фронтальную проекцию стороны до пересечения с осью ${X12} (точки 1₂, 2₂, 3₂), опускаем линию связи на горизонтальную проекцию той же стороны — получаем точки 1₁, 2₁, 3₁, в которых стороны пронзают П1. ${trp.length<3?'Сторона, параллельная П1, следа не имеет. ':''}Найдено точек: ${trp.length}.`,
     `<b>Горизонтальный след Q₁.</b> Прямая, проходящая через точки 1₁, 2₁, 3₁, — горизонтальный след плоскости треугольника. Это ось вращения: плоскость ABC совмещаем с П1, поворачивая её вокруг Q₁.`,
-    `<b>Перпендикуляры к следу.</b> Из вершин A1, B1, C1 опускаем перпендикуляры на след Q₁. Центр вращения (O₁) отмечается только для средней вершины B₁, а для остальных перпендикуляры идут дальше как линии перемещения точек.`,
-    `<b>Прямоугольный треугольник (истинный радиус вращения).</b> Для базовой вершины B строим прямоугольный треугольник. Катет 1 — отрезок до следа. Катет 2 — высота z<sub>B</sub> (измеряется напрямую от B₂ до B₁ по линии связи). Равенство отрезков показано штрихами «//». Гипотенуза — истинный радиус вращения для B.`,
-    `<b>Дуга вращения и истинная величина.</b> Из центра O₁ проводим дугу радиусом R до пересечения с перпендикуляром — получаем точку B₀. Соединяя следы сторон с точкой B₀ и находя пересечение с перпендикулярами, получаем точки A₀ и C₀ (показано пунктиром). Треугольник A₀B₀C₀ — истинная величина (И.В.).<div class="res">AB = <b>${f(sd[0])}</b>, BC = <b>${f(sd[1])}</b>, CA = <b>${f(sd[2])}</b>; площадь = <b>${f(area)}</b><br><small>Проверка по координатам: AB=${f(tr[0])}, BC=${f(tr[1])}, CA=${f(tr[2])}; S=${f(nl/2)}</small></div>`
+    `<b>Перпендикуляры к следу.</b> Из вершин A1, B1, C1 опускаем перпендикуляры на след Q₁. Центр вращения (O₁) отмечается на следе для базовой вершины ${bn}₁, а для остальных перпендикуляры идут дальше как линии перемещения точек.`,
+    `<b>Прямоугольный треугольник (истинный радиус вращения).</b> Для базовой вершины ${bn} строим прямоугольный треугольник. Катет 1 — отрезок ${bn}₁O₁ до следа. Катет 2 — высота z<sub>${bn}</sub>, отложенная от ${bn}₁ вдоль следа. Равенство отрезков показано штрихами «//». Гипотенуза — истинный радиус вращения для ${bn}.`,
+    `<b>Дуга вращения и истинная величина.</b> Из центра O₁ проводим дугу радиусом R до пересечения с перпендикуляром — получаем точку ${bn}₀. Соединяя следы сторон с точкой ${bn}₀ и находя пересечение с перпендикулярами, получаем точки ${nm.filter((n,i)=>i!==bi).map(n=>n+'₀').join(' и ')} (показано пунктиром). Треугольник A₀B₀C₀ — истинная величина (И.В.).<div class="res">AB = <b>${f(sd[0])}</b>, BC = <b>${f(sd[1])}</b>, CA = <b>${f(sd[2])}</b>; площадь = <b>${f(area)}</b><br><small>Проверка по координатам: AB=${f(tr[0])}, BC=${f(tr[1])}, CA=${f(tr[2])}; S=${f(nl/2)}</small></div>`
   ];
 }
 
@@ -328,7 +334,6 @@ function paint(){
   v.filter(i=>i.k==='l').forEach(l=>s+=`<line x1="${l.a[0]}" y1="${l.a[1]}" x2="${l.b[0]}" y2="${l.b[1]}" class="${l.cls}" stroke="${l.col||''}"/>`);
   v.filter(i=>i.k==='a').forEach(a=>s+=`<path d="${a.d}" fill="none" stroke="${a.col}" stroke-width="2"/>`);
   
-  // Автоматическое объединение пересекающихся/совпадающих текстовых меток точек
   const textMap = new Map();
   v.filter(i=>i.k==='t').forEach(t => {
     let key = null;
@@ -367,13 +372,14 @@ function build(){
     r.innerHTML=`<b>${n}</b>`+[0,1,2].map(i=>`<input type="number" step="any" id="${n}${i}" aria-label="${n} ${'XYZ'[i]}">`).join('');
     $('pts').appendChild(r);
   }
-  fill(); $('pts').addEventListener('input',render);
+  fill(); 
+  $('pts').addEventListener('input',render);$('base').addEventListener('change',render);
 }
-function fill(){ for(const n in DEF) DEF[n].forEach((v,i)=>$(n+i).value=v); }
+function fill(){ for(const n in DEF) DEF[n].forEach((v,i)=>$(n+i).value=v);$('base').value='1'; }
 function render(){
   document.querySelectorAll('.task').forEach(b=>b.classList.toggle('on',b.dataset.id===task));
   const T=TASKS[task]; $('leg').innerHTML=T.leg.map(([n,c])=>`<span><i style="background:${c}"></i>${n}</span>`).join('');
-  for(const n of 'ABCS') $('row'+n).hidden=!T.pts.includes(n);
+  for(const n of 'ABCS') $('row'+n).hidden=!T.pts.includes(n);$('baseBox').hidden=task!=='rot';
   const P={}; for(const n of T.pts) P[n]=[0,1,2].map(i=>parseFloat($(n+i).value)||0);
   IT=[]; STEPS=[]; ST=0;
   try{
@@ -387,7 +393,7 @@ function render(){
     $('sn').textContent='';$('prev').disabled=$('next').disabled=$('png').disabled=$('dl').disabled=$('done').disabled=true;
   }
 }
-$('prev').onclick=()=>{   if(done){done=false;cur=Math.max(0,STEPS.length-2)} else if(cur>0)cur--;   paint(); };$('next').onclick=()=>{if(!done&&cur<STEPS.length-1){cur++;paint()}};
+$('prev').onclick=()=>{ if(done){done=false;cur=Math.max(0,STEPS.length-2)} else if(cur>0)cur--; paint(); };$('next').onclick=()=>{if(!done&&cur<STEPS.length-1){cur++;paint()}};
 $('done').onclick=()=>{done=!done;paint()};$('reset').onclick=()=>{fill();render()};
 const svgXml=(w,h)=>{
   const e=$('epure').cloneNode(true); e.setAttribute('width',w); e.setAttribute('height',h); e.setAttribute('xmlns','http://www.w3.org/2000/svg');
